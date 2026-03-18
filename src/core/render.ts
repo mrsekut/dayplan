@@ -254,11 +254,35 @@ export function renderHtml(schedule: Schedule): string {
 
   .debug-bar button:hover { background: #444; }
   .debug-bar button.active { background: #ff4444; color: #fff; border-color: #ff4444; }
+
+  .header-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  .pip-btn {
+    background: #222;
+    color: #aaa;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 3px 10px;
+    cursor: pointer;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .pip-btn:hover { background: #333; color: #fff; }
+  .pip-btn.active { background: #ff4444; color: #fff; border-color: #ff4444; }
+  .pip-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 </style>
 </head>
 <body>
 
-<h1>${escapeHtml(title)}</h1>
+<div class="header-row">
+  <h1>${escapeHtml(title)}</h1>
+  <button class="pip-btn" id="pipBtn" title="Picture-in-Picture">PiP</button>
+</div>
 <div class="clock" id="clock"></div>
 
 <div class="legend">
@@ -424,6 +448,162 @@ function render() {
 
 render();
 setInterval(render, 60000);
+
+// --- Picture-in-Picture ---
+const pipBtn = document.getElementById("pipBtn");
+let pipWindow = null;
+let pipInterval = null;
+
+const KIND_COLORS = {
+  "他人影響": { bg: "#2d2b55", fg: "#a89edb" },
+  "思考系":   { bg: "#1e3a2f", fg: "#7ecba1" },
+  "作業系":   { bg: "#1e2d4a", fg: "#7eb3e0" },
+  "MTG":      { bg: "#3a1e1e", fg: "#e0a07e" },
+  "-":        { bg: "#1a1a1a", fg: "#666" },
+};
+
+function getCurrentInfo() {
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const nowSec = now.getSeconds();
+  const current = SCHEDULE.find(s => nowMin >= timeToMin(s.start) && nowMin < timeToMin(s.end));
+  if (!current) {
+    if (SCHEDULE.length === 0) return null;
+    if (nowMin < timeToMin(SCHEDULE[0].start)) return { task: "開始前", remaining: "", kind: "-", progress: 0 };
+    return { task: "終了", remaining: "", kind: "-", progress: 1 };
+  }
+  const endMin = timeToMin(current.end);
+  const startMin = timeToMin(current.start);
+  const totalSec = (endMin - startMin) * 60;
+  const elapsedSec = (nowMin - startMin) * 60 + nowSec;
+  const remainSec = Math.max(0, totalSec - elapsedSec);
+  const remainMin = Math.ceil(remainSec / 60);
+  const progress = elapsedSec / totalSec;
+  return { task: current.task, remaining: remainMin + "分", kind: current.kind, progress };
+}
+
+function updatePip() {
+  if (!pipWindow || pipWindow.closed) {
+    closePip();
+    return;
+  }
+  const info = getCurrentInfo();
+  if (!info) return;
+
+  const taskEl = pipWindow.document.getElementById("pip-task");
+  const remainEl = pipWindow.document.getElementById("pip-remain");
+  const bar = pipWindow.document.getElementById("pip-bar");
+  const container = pipWindow.document.getElementById("pip-container");
+  if (!taskEl) return;
+
+  const colors = KIND_COLORS[info.kind] || KIND_COLORS["-"];
+  container.style.borderLeftColor = colors.fg;
+  taskEl.textContent = info.task;
+  remainEl.textContent = info.remaining ? "残り " + info.remaining : info.task;
+  bar.style.width = (info.progress * 100) + "%";
+  bar.style.background = colors.fg;
+}
+
+function closePip() {
+  if (pipInterval) { clearInterval(pipInterval); pipInterval = null; }
+  if (pipWindow && !pipWindow.closed) pipWindow.close();
+  pipWindow = null;
+  pipBtn.classList.remove("active");
+  pipBtn.textContent = "PiP";
+}
+
+if (!("documentPictureInPicture" in window)) {
+  pipBtn.disabled = true;
+  pipBtn.title = "このブラウザはDocument PiP非対応です";
+}
+
+pipBtn.addEventListener("click", async () => {
+  if (pipWindow && !pipWindow.closed) {
+    closePip();
+    return;
+  }
+
+  try {
+    pipWindow = await documentPictureInPicture.requestWindow({
+      width: 340,
+      height: 90,
+    });
+  } catch (e) {
+    console.error("PiP error:", e);
+    return;
+  }
+
+  const info = getCurrentInfo();
+  const colors = info ? (KIND_COLORS[info.kind] || KIND_COLORS["-"]) : KIND_COLORS["-"];
+
+  pipWindow.document.body.innerHTML = "";
+  const style = pipWindow.document.createElement("style");
+  style.textContent = \`
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+      background: #0f0f0f;
+      color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+    #pip-container {
+      width: 100%;
+      padding: 12px 16px;
+      border-left: 4px solid \${colors.fg};
+    }
+    #pip-task {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #pip-remain {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ff4444;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 6px;
+    }
+    .pip-progress {
+      width: 100%;
+      height: 3px;
+      background: #222;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    #pip-bar {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 1s linear;
+    }
+  \`;
+  pipWindow.document.head.appendChild(style);
+
+  const container = pipWindow.document.createElement("div");
+  container.id = "pip-container";
+  container.innerHTML = \`
+    <div id="pip-task">\${info ? info.task : "-"}</div>
+    <div id="pip-remain">\${info && info.remaining ? "残り " + info.remaining : "-"}</div>
+    <div class="pip-progress"><div id="pip-bar" style="width:\${info ? info.progress * 100 : 0}%;background:\${colors.fg}"></div></div>
+  \`;
+  pipWindow.document.body.appendChild(container);
+
+  pipBtn.classList.add("active");
+  pipBtn.textContent = "PiP ON";
+
+  updatePip();
+  pipInterval = setInterval(updatePip, 1000);
+
+  pipWindow.addEventListener("pagehide", () => closePip());
+});
 </script>
 </body>
 </html>`;
