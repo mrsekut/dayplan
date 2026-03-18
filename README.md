@@ -75,32 +75,6 @@ dayplan prime
 dayplan onboard
 ```
 
-## Architecture
-
-```
-src/
-├── cli.ts              # Entry point, argv routing
-├── storage.ts          # Load/save JSON files via Bun.file()
-├── commands/
-│   ├── set.ts          # Pipe full schedule JSON
-│   ├── show.ts         # Terminal table display
-│   ├── status.ts       # Current task info
-│   ├── add.ts          # Append a single block
-│   ├── complete.ts     # Mark task completed
-│   ├── remove.ts       # Delete a task
-│   ├── render.ts       # HTML timeline generation + browser open
-│   ├── notify.ts       # macOS notification via launchd
-│   ├── prime.ts        # AI context output
-│   └── onboard.ts      # AI snippet output
-└── core/
-    ├── schedule.ts     # Types, validation, pure transforms
-    ├── format.ts       # Terminal formatting (table, status)
-    ├── render.ts       # HTML/CSS/JS generation (dark theme, real-time)
-    └── notify.ts       # Notification point calc, shell script gen
-```
-
-Core modules (`src/core/`) are pure functions with no side effects. Commands (`src/commands/`) handle I/O and orchestration.
-
 ## Setup
 
 ```bash

@@ -12,7 +12,7 @@ export async function renderCommand(
     throw new Error(`No schedule for ${date}. Use: dayplan set ${date}`);
   }
 
-  const html = renderHtml(schedule);
+  const html = await renderHtml(schedule);
   const outPath = join(homedir(), '.config', 'dayplan', `${date}.html`);
   await Bun.write(outPath, html);
 

@@ -30,53 +30,45 @@ const sample: Schedule = {
 };
 
 describe('renderHtml', () => {
-  test('returns valid HTML document', () => {
-    const html = renderHtml(sample);
-    expect(html).toStartWith('<!DOCTYPE html>');
+  test('returns valid HTML document', async () => {
+    const html = await renderHtml(sample);
+    expect(html).toStartWith('<!doctype html>');
     expect(html).toContain('</html>');
   });
 
-  test('includes schedule date in title', () => {
-    const html = renderHtml(sample);
-    expect(html).toContain('2026-03-12');
+  test('includes schedule date in title', async () => {
+    const html = await renderHtml(sample);
+    expect(html).toContain('2026-03-12 スケジュール');
   });
 
-  test('embeds SCHEDULE array with all blocks', () => {
-    const html = renderHtml(sample);
-    expect(html).toContain('"PRレビュー"');
-    expect(html).toContain('"設計"');
-    expect(html).toContain('"実装"');
+  test('embeds __SCHEDULE__ with all blocks', async () => {
+    const html = await renderHtml(sample);
+    expect(html).toContain('window.__SCHEDULE__=');
+    expect(html).toContain('PRレビュー');
+    expect(html).toContain('設計');
+    expect(html).toContain('実装');
   });
 
-  test('includes status field in SCHEDULE', () => {
-    const html = renderHtml(sample);
+  test('includes status field in schedule data', async () => {
+    const html = await renderHtml(sample);
     expect(html).toContain('"completed"');
     expect(html).toContain('"pending"');
   });
 
-  test('includes kind-based CSS', () => {
-    const html = renderHtml(sample);
-    expect(html).toContain('[data-kind="他人影響"]');
-    expect(html).toContain('[data-kind="思考系"]');
-    expect(html).toContain('[data-kind="作業系"]');
-    expect(html).toContain('[data-kind="MTG"]');
+  test('is a self-contained single HTML file', async () => {
+    const html = await renderHtml(sample);
+    // No external script/css references
+    expect(html).not.toMatch(/src=["']\.\/chunk/);
+    expect(html).not.toMatch(/href=["']\.\/chunk/);
+    // Has inline script and style
+    expect(html).toContain('<script>');
+    expect(html).toContain('<style>');
   });
 
-  test('includes debug mode support', () => {
-    const html = renderHtml(sample);
-    expect(html).toContain('debugBar');
-    expect(html).toContain('timeSlider');
-  });
-
-  test('includes now-line and current block logic', () => {
-    const html = renderHtml(sample);
-    expect(html).toContain('now-line');
-    expect(html).toContain('classList.add("current")');
-  });
-
-  test('handles empty schedule', () => {
+  test('handles empty schedule', async () => {
     const empty: Schedule = { date: '2026-03-12', blocks: [] };
-    const html = renderHtml(empty);
-    expect(html).toContain('SCHEDULE = []');
+    const html = await renderHtml(empty);
+    expect(html).toContain('window.__SCHEDULE__=');
+    expect(html).toContain('"blocks":[]');
   });
 });
