@@ -30,9 +30,15 @@ dayplan complete 2026-03-12 "PRレビュー"
 dayplan remove 2026-03-12 "PRレビュー"
 \`\`\`
 
+### Interactive Web UI
+\`\`\`bash
+dayplan serve [date]         # Start interactive web UI (localhost:3456)
+                             # Block reordering, subtask management, completion, carry-over
+\`\`\`
+
 ### Rendering & Notifications
 \`\`\`bash
-dayplan render [date]        # Generate HTML + open in browser
+dayplan render [date]        # Generate static HTML + open in browser
 dayplan notify [date]        # Register macOS notifications (5min before each task ends)
 dayplan notify --clear       # Clear notifications
 \`\`\`
@@ -49,7 +55,8 @@ All commands accept \`--json\` for machine-readable output.
 \`\`\`typescript
 type TaskKind = "他人影響" | "思考系" | "作業系" | "MTG" | "-";
 type BlockStatus = "pending" | "completed";
-type TimeBlock = { start: string; end: string; task: string; kind: TaskKind; status: BlockStatus };
+type SubTask = { title: string; done: boolean };
+type TimeBlock = { start: string; end: string; task: string; kind: TaskKind; status: BlockStatus; subtasks?: SubTask[] };
 type Schedule = { date: string; blocks: TimeBlock[] };
 \`\`\`
 
@@ -63,6 +70,7 @@ type Schedule = { date: string; blocks: TimeBlock[] };
 5. \`dayplan notify\` to set reminders
 
 ### During the Day
+- Use \`dayplan serve\` for interactive management (reorder, subtasks, carry-over)
 - Task done → \`dayplan complete <date> "<task>"\`
 - Add ad-hoc → \`echo '<block>' | dayplan add <date>\`
 - Remove cancelled → \`dayplan remove <date> "<task>"\`

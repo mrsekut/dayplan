@@ -20,6 +20,7 @@ dayplan status
 
 ### Key Points
 - AI builds JSON, dayplan persists and renders
+- \`dayplan serve\` for interactive web UI (reorder, subtasks, carry-over)
 - All commands support \`--json\` for structured output
 - Data stored in \`~/.config/dayplan/\`
 - Run \`dayplan prime\` for full command reference

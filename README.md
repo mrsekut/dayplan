@@ -8,12 +8,18 @@ CLI tool for AI-driven daily schedule management. Manages time blocks as JSON, r
 type TaskKind = '他人影響' | '思考系' | '作業系' | 'MTG' | '-';
 type BlockStatus = 'pending' | 'completed';
 
+type SubTask = {
+  title: string;
+  done: boolean;
+};
+
 type TimeBlock = {
   start: string; // "HH:MM" (24h)
   end: string; // "HH:MM" (24h)
   task: string;
   kind: TaskKind; // defaults to '-'
   status: BlockStatus; // defaults to 'pending'
+  subtasks?: SubTask[]; // optional sub-tasks within a block
 };
 
 type Schedule = {
@@ -52,10 +58,18 @@ dayplan complete 2025-07-10 "task name"
 dayplan remove 2025-07-10 "task name"
 ```
 
+### Interactive Web UI
+
+```bash
+# Start interactive web UI server (localhost:3456)
+# Supports: block reordering, subtask management, task completion, carry-over to next day
+dayplan serve [date]
+```
+
 ### Visualization & Notifications
 
 ```bash
-# Generate and open an interactive HTML timeline in the browser
+# Generate and open a static HTML timeline in the browser
 dayplan render [date]
 
 # Register macOS notifications (5 min before each task ends)
