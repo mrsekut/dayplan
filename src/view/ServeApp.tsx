@@ -378,11 +378,6 @@ function InteractiveBlock({
           </span>
         )}
         <span className="task-name">{item.task}</span>
-        {subtasks.length > 0 && (
-          <span className="subtask-count">
-            {subtasks.filter(s => s.done).length}/{subtasks.length}
-          </span>
-        )}
         {item.kind !== '-' && <span className="kind-badge">{item.kind}</span>}
         <span className="duration">{dur}m</span>
       </div>
@@ -436,7 +431,7 @@ function InteractiveBlock({
         )}
       </div>
 
-      {isExpanded && (
+      {subtasks.length > 0 && (
         <div className="subtask-panel" onClick={e => e.stopPropagation()}>
           <div className="subtask-list">
             {subtasks.map((st, i) => (
@@ -459,6 +454,11 @@ function InteractiveBlock({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {isExpanded && (
+        <div className="subtask-panel" onClick={e => e.stopPropagation()}>
           <form
             className="subtask-add"
             onSubmit={e => {
