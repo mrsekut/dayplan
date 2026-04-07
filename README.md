@@ -66,12 +66,9 @@ dayplan remove 2025-07-10 "task name"
 dayplan serve [date]
 ```
 
-### Visualization & Notifications
+### Notifications
 
 ```bash
-# Generate and open a static HTML timeline in the browser
-dayplan render [date]
-
 # Register macOS notifications (5 min before each task ends)
 dayplan notify [date]
 

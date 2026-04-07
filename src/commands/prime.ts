@@ -2,8 +2,8 @@ export function primeCommand(): void {
   const output = `# dayplan CLI — AI Context
 
 ## Overview
-dayplan manages daily schedules: data storage, terminal display, HTML timeline rendering, and macOS notifications.
-AI builds the schedule JSON, dayplan handles persistence and rendering.
+dayplan manages daily schedules: data storage, terminal display, interactive web UI, and macOS notifications.
+AI builds the schedule JSON, dayplan handles persistence and display.
 
 ## Commands
 
@@ -36,9 +36,8 @@ dayplan serve [date]         # Start interactive web UI (localhost:3456)
                              # Block reordering, subtask management, completion, carry-over
 \`\`\`
 
-### Rendering & Notifications
+### Notifications
 \`\`\`bash
-dayplan render [date]        # Generate static HTML + open in browser
 dayplan notify [date]        # Register macOS notifications (5min before each task ends)
 dayplan notify --clear       # Clear notifications
 \`\`\`
@@ -66,7 +65,7 @@ type Schedule = { date: string; blocks: TimeBlock[] };
 1. Gather calendar events (MCP), Linear issues, carry-over tasks
 2. Build schedule JSON with AI logic
 3. \`echo '<json>' | dayplan set <date>\`
-4. \`dayplan render\` to view timeline
+4. \`dayplan serve\` to view/manage in browser
 5. \`dayplan notify\` to set reminders
 
 ### During the Day
@@ -74,7 +73,7 @@ type Schedule = { date: string; blocks: TimeBlock[] };
 - Task done → \`dayplan complete <date> "<task>"\`
 - Add ad-hoc → \`echo '<block>' | dayplan add <date>\`
 - Remove cancelled → \`dayplan remove <date> "<task>"\`
-- After changes → \`dayplan render\` + \`dayplan notify\` to refresh
+- After changes → \`dayplan notify\` to refresh reminders
 
 ### Review
 - \`dayplan show\` to see completion status
@@ -82,7 +81,6 @@ type Schedule = { date: string; blocks: TimeBlock[] };
 
 ## Storage
 Data: \`~/.config/dayplan/YYYY-MM-DD.json\`
-HTML: \`~/.config/dayplan/YYYY-MM-DD.html\`
 
 ## Error Handling
 Errors include actionable hints. Example:

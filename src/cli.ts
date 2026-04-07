@@ -60,13 +60,7 @@ async function main(): Promise<void> {
       await removeCommand(date, task, jsonFlag);
       break;
     }
-    case 'render': {
-      const date = filteredArgs[1] ?? today();
-      const { renderCommand } = await import('./commands/render');
-      await renderCommand(date, jsonFlag);
-      break;
-    }
-    case 'serve': {
+case 'serve': {
       const date = filteredArgs[1] ?? today();
       const { serveCommand } = await import('./commands/serve');
       await serveCommand(date);
@@ -111,7 +105,6 @@ Usage:
   dayplan add <date>              Add a block (pipe JSON to stdin)
   dayplan complete <date> <task>  Mark task as completed
   dayplan remove <date> <task>    Remove a task
-  dayplan render [date]           Generate HTML timeline + open
   dayplan serve [date]            Start interactive web UI server
   dayplan notify [date]           Register macOS notifications
   dayplan notify --clear          Clear notifications
