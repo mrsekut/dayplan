@@ -4,6 +4,12 @@ export type TaskKind = '他人影響' | '思考系' | '作業系' | 'MTG' | '-';
 /** タスクの状態 */
 export type BlockStatus = 'pending' | 'completed';
 
+/** サブタスク */
+export type SubTask = {
+  title: string;
+  done: boolean;
+};
+
 /** 1つの時間ブロック */
 export type TimeBlock = {
   start: string; // "HH:MM"
@@ -11,6 +17,7 @@ export type TimeBlock = {
   task: string;
   kind: TaskKind;
   status: BlockStatus;
+  subtasks?: SubTask[];
 };
 
 /** 1日のスケジュール */
@@ -59,12 +66,29 @@ function validateBlock(block: unknown, index: number): TimeBlock {
     );
   }
 
+  const subtasks = b['subtasks'];
+  let parsedSubtasks: SubTask[] | undefined;
+  if (Array.isArray(subtasks)) {
+    parsedSubtasks = subtasks.map((s: unknown, j: number) => {
+      if (typeof s !== 'object' || s === null)
+        throw new Error(`blocks[${index}].subtasks[${j}]: expected object`);
+      const st = s as Record<string, unknown>;
+      if (typeof st['title'] !== 'string')
+        throw new Error(`blocks[${index}].subtasks[${j}].title: required`);
+      return {
+        title: st['title'],
+        done: st['done'] === true,
+      };
+    });
+  }
+
   return {
     start: b['start'],
     end: b['end'],
     task: b['task'],
     kind: kind as TaskKind,
     status: status as BlockStatus,
+    ...(parsedSubtasks ? { subtasks: parsedSubtasks } : {}),
   };
 }
 
@@ -141,6 +165,112 @@ export function getCurrentBlock(
       b => nowMin >= timeToMin(b.start) && nowMin < timeToMin(b.end),
     ) ?? null
   );
+}
+
+/** ブロックの順序を入れ替え (時刻を交換) */
+export function swapBlocks(
+  schedule: Schedule,
+  indexA: number,
+  indexB: number,
+): Schedule {
+  const blocks = [...schedule.blocks];
+  if (
+    indexA < 0 ||
+    indexA >= blocks.length ||
+    indexB < 0 ||
+    indexB >= blocks.length
+  ) {
+    throw new Error(`Invalid block index: ${indexA}, ${indexB}`);
+  }
+  const a = blocks[indexA]!;
+  const b = blocks[indexB]!;
+  // 時刻を保持したままタスク内容を入れ替える
+  blocks[indexA] = { ...b, start: a.start, end: a.end };
+  blocks[indexB] = { ...a, start: b.start, end: b.end };
+  return { ...schedule, blocks };
+}
+
+/** サブタスクを追加 */
+export function addSubtask(
+  schedule: Schedule,
+  taskName: string,
+  subtaskTitle: string,
+): Schedule {
+  const blocks = schedule.blocks.map(b => {
+    if (b.task !== taskName) return b;
+    const subtasks = [
+      ...(b.subtasks ?? []),
+      { title: subtaskTitle, done: false },
+    ];
+    return { ...b, subtasks };
+  });
+  if (blocks.every((b, i) => b === schedule.blocks[i])) {
+    throw new Error(`Task not found: "${taskName}"`);
+  }
+  return { ...schedule, blocks };
+}
+
+/** サブタスクの完了状態を切り替え */
+export function toggleSubtask(
+  schedule: Schedule,
+  taskName: string,
+  subtaskIndex: number,
+): Schedule {
+  const blocks = schedule.blocks.map(b => {
+    if (b.task !== taskName) return b;
+    const subtasks = (b.subtasks ?? []).map((s, i) =>
+      i === subtaskIndex ? { ...s, done: !s.done } : s,
+    );
+    return { ...b, subtasks };
+  });
+  if (blocks.every((b, i) => b === schedule.blocks[i])) {
+    throw new Error(`Task not found: "${taskName}"`);
+  }
+  return { ...schedule, blocks };
+}
+
+/** サブタスクを削除 */
+export function removeSubtask(
+  schedule: Schedule,
+  taskName: string,
+  subtaskIndex: number,
+): Schedule {
+  const blocks = schedule.blocks.map(b => {
+    if (b.task !== taskName) return b;
+    const filtered = (b.subtasks ?? []).filter((_, i) => i !== subtaskIndex);
+    if (filtered.length > 0) {
+      return { ...b, subtasks: filtered };
+    }
+    const { subtasks: _removed, ...rest } = b;
+    return rest as TimeBlock;
+  });
+  if (blocks.every((b, i) => b === schedule.blocks[i])) {
+    throw new Error(`Task not found: "${taskName}"`);
+  }
+  return { ...schedule, blocks };
+}
+
+/** 未完了ブロックを翌日に繰り越し */
+export function carryOverBlocks(
+  fromSchedule: Schedule,
+  toSchedule: Schedule,
+  taskNames: string[],
+): { from: Schedule; to: Schedule } {
+  const toCarry = fromSchedule.blocks.filter(b => taskNames.includes(b.task));
+  if (toCarry.length === 0) {
+    throw new Error('No matching tasks to carry over');
+  }
+  const fromBlocks = fromSchedule.blocks.filter(
+    b => !taskNames.includes(b.task),
+  );
+  const newToBlocks = [
+    ...toSchedule.blocks,
+    ...toCarry.map(b => ({ ...b, status: 'pending' as const })),
+  ].sort((a, b) => timeToMin(a.start) - timeToMin(b.start));
+  return {
+    from: { ...fromSchedule, blocks: fromBlocks },
+    to: { ...toSchedule, blocks: newToBlocks },
+  };
 }
 
 /** "HH:MM" を分に変換 */

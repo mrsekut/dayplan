@@ -66,6 +66,12 @@ async function main(): Promise<void> {
       await renderCommand(date, jsonFlag);
       break;
     }
+    case 'serve': {
+      const date = filteredArgs[1] ?? today();
+      const { serveCommand } = await import('./commands/serve');
+      await serveCommand(date);
+      break;
+    }
     case 'notify': {
       const clearFlag = filteredArgs.includes('--clear');
       const date =
@@ -106,6 +112,7 @@ Usage:
   dayplan complete <date> <task>  Mark task as completed
   dayplan remove <date> <task>    Remove a task
   dayplan render [date]           Generate HTML timeline + open
+  dayplan serve [date]            Start interactive web UI server
   dayplan notify [date]           Register macOS notifications
   dayplan notify --clear          Clear notifications
   dayplan prime                   AI context output
