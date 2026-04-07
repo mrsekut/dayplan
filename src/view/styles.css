@@ -308,6 +308,8 @@ h1 {
 
 .block.interactive {
   cursor: pointer;
+  flex-direction: column;
+  overflow: visible;
 }
 
 .block.interactive:hover {
@@ -319,6 +321,7 @@ h1 {
   align-items: flex-start;
   gap: 10px;
   width: 100%;
+  min-height: 100%;
 }
 
 .block-actions {
