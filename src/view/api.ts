@@ -110,6 +110,24 @@ export async function removeSubtask(
   };
 }
 
+export async function updateBlockTime(
+  date: string,
+  task: string,
+  start: string,
+  end: string,
+): Promise<ScheduleData> {
+  const data = (await request(`/api/schedule/${date}/update-time`, 'POST', {
+    task,
+    start,
+    end,
+  })) as { date: string; blocks: ScheduleData['blocks'] };
+  return {
+    date: data.date,
+    title: `${data.date} スケジュール`,
+    blocks: data.blocks,
+  };
+}
+
 export async function carryOver(
   date: string,
   tasks: string[],

@@ -105,6 +105,18 @@ export function ServeApp({ date }: Props) {
     [date],
   );
 
+  const handleUpdateTime = useCallback(
+    async (task: string, start: string, end: string) => {
+      try {
+        const d = await api.updateBlockTime(date, task, start, end);
+        setData(d);
+      } catch (e: unknown) {
+        setError((e as Error).message);
+      }
+    },
+    [date],
+  );
+
   const handleCarry = useCallback(
     async (task: string) => {
       try {
@@ -209,6 +221,9 @@ export function ServeApp({ date }: Props) {
             onSwapDown={() => handleSwap(i, i + 1)}
             onComplete={() => handleComplete(item.task)}
             onCarry={() => handleCarry(item.task)}
+            onUpdateTime={(start: string, end: string) =>
+              handleUpdateTime(item.task, start, end)
+            }
             onAddSubtask={(title: string) => handleAddSubtask(item.task, title)}
             onToggleSubtask={(idx: number) =>
               handleToggleSubtask(item.task, idx)
@@ -244,6 +259,7 @@ function InteractiveBlock({
   onSwapDown,
   onComplete,
   onCarry,
+  onUpdateTime,
   onAddSubtask,
   onToggleSubtask,
   onRemoveSubtask,
@@ -261,6 +277,7 @@ function InteractiveBlock({
   onSwapDown: () => void;
   onComplete: () => void;
   onCarry: () => void;
+  onUpdateTime: (start: string, end: string) => void;
   onAddSubtask: (title: string) => void;
   onToggleSubtask: (idx: number) => void;
   onRemoveSubtask: (idx: number) => void;
@@ -290,6 +307,23 @@ function InteractiveBlock({
 
   const subtasks = item.subtasks ?? [];
 
+  const [editingTime, setEditingTime] = useState(false);
+  const [editStart, setEditStart] = useState(item.start);
+  const [editEnd, setEditEnd] = useState(item.end);
+
+  const commitTime = () => {
+    if (editStart !== item.start || editEnd !== item.end) {
+      onUpdateTime(editStart, editEnd);
+    }
+    setEditingTime(false);
+  };
+
+  const cancelTime = () => {
+    setEditStart(item.start);
+    setEditEnd(item.end);
+    setEditingTime(false);
+  };
+
   return (
     <div
       className={classes}
@@ -302,9 +336,47 @@ function InteractiveBlock({
       }}
     >
       <div className="block-main" onClick={onToggleExpand}>
-        <span className="time-label">
-          {item.start}-{item.end}
-        </span>
+        {editingTime ? (
+          <span
+            className="time-edit"
+            onClick={e => e.stopPropagation()}
+          >
+            <input
+              type="time"
+              value={editStart}
+              onChange={e => setEditStart(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitTime();
+                if (e.key === 'Escape') cancelTime();
+              }}
+              autoFocus
+            />
+            <span>-</span>
+            <input
+              type="time"
+              value={editEnd}
+              onChange={e => setEditEnd(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitTime();
+                if (e.key === 'Escape') cancelTime();
+              }}
+              onBlur={commitTime}
+            />
+          </span>
+        ) : (
+          <span
+            className="time-label"
+            onClick={e => {
+              e.stopPropagation();
+              setEditStart(item.start);
+              setEditEnd(item.end);
+              setEditingTime(true);
+            }}
+            title="クリックで時刻編集"
+          >
+            {item.start}-{item.end}
+          </span>
+        )}
         <span className="task-name">{item.task}</span>
         {subtasks.length > 0 && (
           <span className="subtask-count">

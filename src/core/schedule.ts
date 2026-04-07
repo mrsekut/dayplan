@@ -250,6 +250,29 @@ export function removeSubtask(
   return { ...schedule, blocks };
 }
 
+/** ブロックの時刻を変更して時間順にソート */
+export function updateBlockTime(
+  schedule: Schedule,
+  taskName: string,
+  start: string,
+  end: string,
+): Schedule {
+  if (!TIME_RE.test(start)) throw new Error(`Invalid start: "${start}"`);
+  if (!TIME_RE.test(end)) throw new Error(`Invalid end: "${end}"`);
+  if (timeToMin(start) >= timeToMin(end)) {
+    throw new Error('start must be before end');
+  }
+  let found = false;
+  const blocks = schedule.blocks.map(b => {
+    if (b.task !== taskName) return b;
+    found = true;
+    return { ...b, start, end };
+  });
+  if (!found) throw new Error(`Task not found: "${taskName}"`);
+  blocks.sort((a, b) => timeToMin(a.start) - timeToMin(b.start));
+  return { ...schedule, blocks };
+}
+
 /** 未完了ブロックを翌日に繰り越し */
 export function carryOverBlocks(
   fromSchedule: Schedule,

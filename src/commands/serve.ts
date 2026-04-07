@@ -7,6 +7,7 @@ import {
   addBlock,
   removeBlock,
   completeBlock,
+  updateBlockTime,
   carryOverBlocks,
   type Schedule,
   type TimeBlock,
@@ -170,6 +171,23 @@ export async function serveCommand(date?: string): Promise<void> {
         };
         let schedule = await getSchedule(d);
         schedule = removeSubtask(schedule, task, index);
+        await save(schedule);
+        return json(schedule);
+      }
+
+      // POST /api/schedule/:date/update-time
+      if (
+        req.method === 'POST' &&
+        url.pathname.match(/^\/api\/schedule\/[^/]+\/update-time$/)
+      ) {
+        const d = url.pathname.split('/')[3]!;
+        const { task, start, end } = (await req.json()) as {
+          task: string;
+          start: string;
+          end: string;
+        };
+        let schedule = await getSchedule(d);
+        schedule = updateBlockTime(schedule, task, start, end);
         await save(schedule);
         return json(schedule);
       }

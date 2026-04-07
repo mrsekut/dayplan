@@ -324,6 +324,43 @@ h1 {
   min-height: 100%;
 }
 
+.block.interactive .time-label {
+  cursor: pointer;
+}
+
+.block.interactive .time-label:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.time-edit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.time-edit input[type='time'] {
+  background: #1a1a1a;
+  border: 1px solid #555;
+  border-radius: 3px;
+  color: #e0e0e0;
+  font-size: 11px;
+  font-family: inherit;
+  padding: 1px 4px;
+  width: 80px;
+}
+
+.time-edit input[type='time']:focus {
+  outline: none;
+  border-color: #ff4444;
+}
+
+.time-edit > span {
+  color: #888;
+  font-size: 11px;
+}
+
 .block-actions {
   position: absolute;
   right: 8px;
