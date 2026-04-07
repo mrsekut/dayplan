@@ -11,6 +11,7 @@ import {
   type Schedule,
   type TimeBlock,
 } from '../core/schedule';
+import serveHtml from '../view/serve.html';
 
 const PORT = 3456;
 
@@ -28,21 +29,7 @@ function tomorrow(dateStr: string): string {
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-    },
-  });
-}
-
-function cors(): Response {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
+    headers: { 'Content-Type': 'application/json' },
   });
 }
 
@@ -55,17 +42,18 @@ async function getSchedule(date: string): Promise<Schedule> {
 
 export async function serveCommand(date?: string): Promise<void> {
   const targetDate = date ?? today();
-  console.log(`Starting dayplan server on http://localhost:${PORT}`);
-  console.log(`Date: ${targetDate}`);
 
   Bun.serve({
     port: PORT,
+    routes: {
+      '/:date': serveHtml,
+    },
     async fetch(req) {
       const url = new URL(req.url);
 
-      if (req.method === 'OPTIONS') return cors();
-
-      // --- API routes ---
+      if (url.pathname === '/') {
+        return Response.redirect(`/${targetDate}`, 302);
+      }
 
       // GET /api/schedule/:date
       if (req.method === 'GET' && url.pathname.startsWith('/api/schedule/')) {
@@ -74,7 +62,7 @@ export async function serveCommand(date?: string): Promise<void> {
         return json(schedule);
       }
 
-      // PUT /api/schedule/:date — set full schedule
+      // PUT /api/schedule/:date
       if (req.method === 'PUT' && url.pathname.startsWith('/api/schedule/')) {
         const d = url.pathname.split('/')[3]!;
         const body = (await req.json()) as { blocks: TimeBlock[] };
@@ -202,71 +190,13 @@ export async function serveCommand(date?: string): Promise<void> {
         return json({ from: result.from, to: result.to, nextDate });
       }
 
-      // --- Frontend ---
-      if (url.pathname === '/' || url.pathname === '/index.html') {
-        // Redirect to today's date
-        return Response.redirect(`http://localhost:${PORT}/${targetDate}`, 302);
-      }
-
-      // Serve bundled JS
-      if (url.pathname === '/_app.js') {
-        const js = await getBundledScript();
-        return new Response(js, {
-          headers: { 'Content-Type': 'application/javascript; charset=utf-8' },
-        });
-      }
-
-      // Serve CSS
-      if (url.pathname === '/_styles.css') {
-        const css = await getStyles();
-        return new Response(css, {
-          headers: { 'Content-Type': 'text/css; charset=utf-8' },
-        });
-      }
-
-      // Serve frontend for /:date
-      if (url.pathname.match(/^\/\d{4}-\d{2}-\d{2}$/)) {
-        return new Response(FRONTEND_HTML, {
-          headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        });
-      }
-
       return new Response('Not Found', { status: 404 });
     },
+    development: {
+      hmr: true,
+      console: true,
+    },
   });
-}
 
-const FRONTEND_HTML = `<!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>dayplan</title>
-  <link rel="stylesheet" href="/_styles.css" />
-</head>
-<body>
-  <div id="root"></div>
-  <script type="module" src="/_app.js"></script>
-</body>
-</html>`;
-
-let _cachedJs: string | null = null;
-
-async function getStyles(): Promise<string> {
-  const file = Bun.file(import.meta.dir + '/../view/styles.css');
-  return await file.text();
-}
-
-async function getBundledScript(): Promise<string> {
-  if (_cachedJs) return _cachedJs;
-  const result = await Bun.build({
-    entrypoints: [import.meta.dir + '/../view/serve-main.tsx'],
-    target: 'browser',
-    minify: false,
-  });
-  if (!result.success) {
-    throw new Error('Frontend build failed: ' + result.logs.join('\n'));
-  }
-  _cachedJs = await result.outputs[0]!.text();
-  return _cachedJs;
+  console.log(`http://localhost:${PORT}/${targetDate}`);
 }
