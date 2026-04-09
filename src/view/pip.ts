@@ -51,43 +51,62 @@ function updatePipContent(pw: Window, plan: DayPlan): void {
 
   const nowMin = getNowMin();
 
-  let slotRemain = 0;
-  let activeTask: { title: string; estimatedMinutes: number } | null = null;
-  let slotStart = 0;
-  let slotEnd = 0;
-
+  let currentEntry: Entry | null = null;
   for (const e of plan.entries) {
     if (timeToMin(e.start) <= nowMin && nowMin < timeToMin(e.end)) {
-      if (e.type === 'work' && e.queue) {
-        slotRemain = timeToMin(e.end) - nowMin;
-        slotStart = timeToMin(e.start);
-        slotEnd = timeToMin(e.end);
-        const t = e.queue.find(t => t.status === 'active');
-        if (t) activeTask = t;
-      } else if (e.type === 'fixed' && e.title) {
-        activeTask = { title: e.title, estimatedMinutes: timeToMin(e.end) - timeToMin(e.start) };
-        slotRemain = timeToMin(e.end) - nowMin;
-        slotStart = timeToMin(e.start);
-        slotEnd = timeToMin(e.end);
-      }
+      currentEntry = e;
       break;
     }
   }
 
-  if (!activeTask) {
-    root.innerHTML = '<div class="pip-task">タスクなし</div>';
+  if (!currentEntry) {
+    // 次の予定を探す
+    let nextEntry: Entry | null = null;
+    for (const e of plan.entries) {
+      if (timeToMin(e.start) > nowMin) { nextEntry = e; break; }
+    }
+    if (nextEntry) {
+      const untilMin = timeToMin(nextEntry.start) - nowMin;
+      const label = nextEntry.type === 'fixed' ? nextEntry.title : '作業枠';
+      root.innerHTML = `<div class="pip-task">待機中</div><div class="pip-time">次: ${label} まで ${untilMin}分</div>`;
+    } else {
+      root.innerHTML = '<div class="pip-task">本日終了</div>';
+    }
     return;
   }
 
-  const progress = slotEnd > slotStart ? (1 - slotRemain / (slotEnd - slotStart)) : 0;
+  const remain = timeToMin(currentEntry.end) - nowMin;
+  const total = timeToMin(currentEntry.end) - timeToMin(currentEntry.start);
+  const progress = total > 0 ? (1 - remain / total) : 0;
+
+  if (currentEntry.type === 'fixed') {
+    root.innerHTML = `
+      <div class="pip-task">\u{1F5E3}\uFE0F ${currentEntry.title ?? ''}</div>
+      <div class="pip-time">残り ${remain}分</div>
+      <div class="pip-bar"><div class="pip-fill" style="width:${Math.min(progress * 100, 100)}%; background:#e07e4f"></div></div>
+    `;
+    return;
+  }
+
+  // WorkSlot
+  const activeTask = currentEntry.queue?.find(t => t.status === 'active');
+  if (!activeTask) {
+    const allDone = currentEntry.queue?.every(t => t.status === 'completed' || t.status === 'skipped');
+    if (allDone && (currentEntry.queue?.length ?? 0) > 0) {
+      root.innerHTML = `<div class="pip-task">\u2705 スロット完了</div><div class="pip-time">次の予定まで ${remain}分</div>`;
+    } else {
+      root.innerHTML = `<div class="pip-task">タスクなし</div><div class="pip-time">作業枠 残り${remain}分</div>`;
+    }
+    return;
+  }
 
   root.innerHTML = `
     <div class="pip-task">${activeTask.title}</div>
-    <div class="pip-time">残り ${slotRemain}分 (作業枠)</div>
+    <div class="pip-time">残り ${remain}分 (作業枠)</div>
     <div class="pip-bar"><div class="pip-fill" style="width:${Math.min(progress * 100, 100)}%"></div></div>
     <div class="pip-actions">
-      <button class="pip-btn complete" data-action="complete">✓ 完了</button>
-      <button class="pip-btn skip" data-action="skip">⏭ スキップ</button>
+      <button class="pip-btn complete" data-action="complete">\u2713 完了</button>
+      <button class="pip-btn skip" data-action="skip">\u23ED スキップ</button>
     </div>
   `;
 }
