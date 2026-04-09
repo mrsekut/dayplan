@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 import {
   type FixedBlock,
   type DayPlan,

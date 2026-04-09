@@ -2,6 +2,9 @@
   "name": "dayplan",
   "version": "2.0.0",
   "type": "module",
+  "bin": {
+    "dayplan": "src/cli.ts"
+  },
   "scripts": {
     "test": "bun test"
   },
