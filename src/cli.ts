@@ -137,27 +137,32 @@ function printPrime() {
 ## データモデル
 - FixedBlock: 動かせない予定（MTG等）。start, end, title, kind
 - WorkSlot: 固定ブロック間の作業時間。タスクのキュー(queue)を持つ
-- Task: title, estimatedMinutes, kind(focus/batch/mtg/other), status(pending/active/completed/skipped)
+- Task: title, estimatedMinutes, kind(focus/batch/mtg/other), status(pending/active/completed/skipped), beadId?(beads連携)
 - DayPlan: date + entries(FixedBlock | WorkSlot の配列)
+
+## Beads連携
+- タスクに \`beadId\` を含めると、\`dayplan complete\` 時に自動で \`bd close <beadId>\` が実行される
+- \`bd list --status=open --json\` でタスク候補を取得し、beadIdを含めて \`dayplan set\` に渡すこと
+- 差し込み時も \`bd create\` → beadId取得 → \`dayplan add-task\` に含める
 
 ## setの入力フォーマット
 \`\`\`json
 {
   "date": "YYYY-MM-DD",
   "fixedBlocks": [{ "start": "HH:MM", "end": "HH:MM", "title": "...", "kind": "mtg" }],
-  "tasks": [{ "title": "...", "estimatedMinutes": 60, "kind": "focus" }]
+  "tasks": [{ "title": "...", "estimatedMinutes": 60, "kind": "focus", "beadId": "dayplan-xxx" }]
 }
 \`\`\`
 
 ## add-taskの入力フォーマット
 \`\`\`json
-{ "title": "...", "estimatedMinutes": 20, "kind": "batch" }
+{ "title": "...", "estimatedMinutes": 20, "kind": "batch", "beadId": "dayplan-xxx" }
 \`\`\`
 
 ## ワークフロー
-1. 朝: Googleカレンダーから固定予定を取得し、タスクリストと合わせて \`dayplan set\` で投入
-2. 日中: \`dayplan status\` で今のタスク確認 → 完了したら \`dayplan complete\` → 次タスクへ
-3. 差し込み: \`dayplan add-task\` でキューに追加
+1. 朝: Googleカレンダーから固定予定を取得 + \`bd list --status=open\` でタスク候補取得 → \`dayplan set\` で投入
+2. 日中: \`dayplan status\` で今のタスク確認 → 完了したら \`dayplan complete\` → 次タスクへ(beadIdがあれば自動でbd close)
+3. 差し込み: \`bd create\` → \`dayplan add-task\` でキューに追加
 4. スキップ: \`dayplan skip\` で今のタスクを飛ばす`);
 
   if (plan) {
@@ -352,20 +357,41 @@ async function main() {
       if (slot) activateNextTask(slot);
       const result = completeCurrentTask(plan);
       savePlan(plan);
-      output({ completed: result.completed, next: result.next }, () => {
-        if (result.completed) {
-          console.log(`✅ 完了: ${result.completed.title}`);
-          if (result.next) {
-            console.log(
-              `→ 次: ${result.next.title} (${result.next.estimatedMinutes}m)`,
-            );
+
+      // beads連携: beadIdがあればbd closeを実行
+      let closedBeadId: string | null = null;
+      if (result.completed?.beadId) {
+        try {
+          const proc = Bun.spawnSync(['bd', 'close', result.completed.beadId]);
+          if (proc.exitCode === 0) {
+            closedBeadId = result.completed.beadId;
           } else {
-            console.log('キューにタスクがありません');
+            const stderr = proc.stderr.toString().trim();
+            if (!jsonMode) console.log(`⚠ bd close失敗: ${stderr}`);
           }
-        } else {
-          console.log('完了するタスクがありません');
+        } catch {
+          if (!jsonMode) console.log('⚠ bdコマンドが見つかりません');
         }
-      });
+      }
+
+      output(
+        { completed: result.completed, next: result.next, closedBeadId },
+        () => {
+          if (result.completed) {
+            console.log(`✅ 完了: ${result.completed.title}`);
+            if (closedBeadId) console.log(`   🔗 bd close ${closedBeadId}`);
+            if (result.next) {
+              console.log(
+                `→ 次: ${result.next.title} (${result.next.estimatedMinutes}m)`,
+              );
+            } else {
+              console.log('キューにタスクがありません');
+            }
+          } else {
+            console.log('完了するタスクがありません');
+          }
+        },
+      );
       break;
     }
 
