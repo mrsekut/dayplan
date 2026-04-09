@@ -1,8 +1,5 @@
 #!/usr/bin/env bun
-import { readFileSync } from 'fs';
-import { join } from 'path';
 import {
-  type DayPlan,
   todayStr,
   completeCurrentTask,
   skipCurrentTask,
@@ -10,7 +7,9 @@ import {
   activateNextTask,
   carryOverTasks,
 } from './schedule';
+import type { DayPlan } from './schedule';
 import { loadPlan, savePlan } from './storage';
+import html from './view/index.html';
 
 const dateArg = process.argv.find(
   a =>
@@ -33,22 +32,13 @@ function getPlan(): DayPlan | null {
   return plan;
 }
 
-const htmlTemplate = readFileSync(
-  join(import.meta.dir, 'view.html'),
-  'utf-8',
-);
-const html = htmlTemplate.replace('<title>dayplan</title>', `<title>dayplan - ${date}</title>`);
-
 Bun.serve({
   port: PORT,
+  routes: {
+    '/': html,
+  },
   fetch(req) {
     const url = new URL(req.url);
-
-    if (url.pathname === '/' || url.pathname === '') {
-      return new Response(html, {
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
-      });
-    }
 
     if (url.pathname.startsWith('/api/plan/')) {
       const d = url.pathname.split('/').pop() ?? date;
@@ -63,22 +53,18 @@ Bun.serve({
 
     if (url.pathname === '/api/complete' && req.method === 'POST') {
       const plan = getPlan();
-      if (!plan)
-        return Response.json({ error: 'no plan' }, { status: 404 });
+      if (!plan) return Response.json({ error: 'no plan' }, { status: 404 });
       const result = completeCurrentTask(plan);
       savePlan(plan);
       if (result.completed?.beadId) {
-        try {
-          Bun.spawnSync(['bd', 'close', result.completed.beadId]);
-        } catch {}
+        try { Bun.spawnSync(['bd', 'close', result.completed.beadId]); } catch {}
       }
       return Response.json(result);
     }
 
     if (url.pathname === '/api/skip' && req.method === 'POST') {
       const plan = getPlan();
-      if (!plan)
-        return Response.json({ error: 'no plan' }, { status: 404 });
+      if (!plan) return Response.json({ error: 'no plan' }, { status: 404 });
       const result = skipCurrentTask(plan);
       savePlan(plan);
       return Response.json(result);
@@ -88,4 +74,4 @@ Bun.serve({
   },
 });
 
-console.log(`🌐 dayplan serve: http://localhost:${PORT}/ (date: ${date})`);
+console.log(`🌐 dayplan serve: http://localhost:${PORT}/?date=${date}`);

@@ -1,0 +1,29 @@
+{
+  "date": "2026-04-10",
+  "fixedBlocks": [
+    { "start": "10:00", "end": "10:30", "title": "朝会", "kind": "mtg" },
+    { "start": "12:00", "end": "13:00", "title": "昼休み", "kind": "other" },
+    {
+      "start": "14:00",
+      "end": "14:30",
+      "title": "1on1 with 田中",
+      "kind": "mtg"
+    },
+    { "start": "16:00", "end": "17:00", "title": "採用面接", "kind": "mtg" }
+  ],
+  "tasks": [
+    { "title": "Slack・メール整理", "estimatedMinutes": 20, "kind": "batch" },
+    {
+      "title": "機能Aの設計ドキュメント",
+      "estimatedMinutes": 60,
+      "kind": "focus"
+    },
+    { "title": "PR レビュー 3件", "estimatedMinutes": 30, "kind": "batch" },
+    { "title": "機能A 実装", "estimatedMinutes": 90, "kind": "focus" },
+    { "title": "採用面接 準備", "estimatedMinutes": 25, "kind": "focus" },
+    { "title": "面接振り返りメモ", "estimatedMinutes": 15, "kind": "batch" },
+    { "title": "バグ修正 #1234", "estimatedMinutes": 45, "kind": "focus" },
+    { "title": "経費精算・勤怠", "estimatedMinutes": 10, "kind": "batch" },
+    { "title": "日報・明日の準備", "estimatedMinutes": 15, "kind": "batch" }
+  ]
+}
