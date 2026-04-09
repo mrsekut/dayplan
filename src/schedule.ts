@@ -136,6 +136,38 @@ export function completeCurrentTask(
   return { completed: active, next };
 }
 
+/** Find and complete the active task in any work slot (time-independent) */
+export function completeActiveTask(
+  plan: DayPlan,
+): { completed: Task | null; next: Task | null } {
+  for (const entry of plan.entries) {
+    if (entry.type !== 'work') continue;
+    const active = entry.queue.find(t => t.status === 'active');
+    if (active) {
+      active.status = 'completed';
+      const next = activateNextTask(entry);
+      return { completed: active, next };
+    }
+  }
+  return { completed: null, next: null };
+}
+
+/** Find and skip the active task in any work slot (time-independent) */
+export function skipActiveTask(
+  plan: DayPlan,
+): { skipped: Task | null; next: Task | null } {
+  for (const entry of plan.entries) {
+    if (entry.type !== 'work') continue;
+    const active = entry.queue.find(t => t.status === 'active');
+    if (active) {
+      active.status = 'skipped';
+      const next = activateNextTask(entry);
+      return { skipped: active, next };
+    }
+  }
+  return { skipped: null, next: null };
+}
+
 export function skipCurrentTask(
   plan: DayPlan,
   now = nowMinutes(),

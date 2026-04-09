@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 import {
   todayStr,
-  completeCurrentTask,
-  skipCurrentTask,
+  completeActiveTask,
+  skipActiveTask,
   getCurrentWorkSlot,
   activateNextTask,
   carryOverTasks,
@@ -65,7 +65,7 @@ Bun.serve({
     if (url.pathname === '/api/complete' && req.method === 'POST') {
       const plan = getPlan();
       if (!plan) return Response.json({ error: 'no plan' }, { status: 404 });
-      const result = completeCurrentTask(plan);
+      const result = completeActiveTask(plan);
       savePlan(plan);
       if (result.completed?.beadId) {
         try { Bun.spawnSync(['bd', 'close', result.completed.beadId]); } catch {}
@@ -76,7 +76,7 @@ Bun.serve({
     if (url.pathname === '/api/skip' && req.method === 'POST') {
       const plan = getPlan();
       if (!plan) return Response.json({ error: 'no plan' }, { status: 404 });
-      const result = skipCurrentTask(plan);
+      const result = skipActiveTask(plan);
       savePlan(plan);
       return Response.json(result);
     }
