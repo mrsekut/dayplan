@@ -97,6 +97,7 @@ function printHelp() {
   dayplan complete         現在のタスクを完了にする
   dayplan skip             現在のタスクをスキップ
   dayplan add-task         タスクをキューに追加 (JSON from stdin)
+  dayplan serve [date]     Web UIを起動 (http://localhost:3456)
   dayplan prime            AI向けフルコンテキスト出力
   dayplan help             このヘルプを表示
 
@@ -449,6 +450,17 @@ async function main() {
           console.log('追加先の作業枠がありません'),
         );
       }
+      break;
+    }
+
+    case 'serve': {
+      // serve is a separate entry point
+      const serveDate = args.find(a => a !== 'serve' && a !== '--json' && /^\d{4}-\d{2}-\d{2}$/.test(a)) ?? todayStr();
+      const proc = Bun.spawn(['bun', 'run', new URL('./serve.ts', import.meta.url).pathname, serveDate], {
+        stdout: 'inherit',
+        stderr: 'inherit',
+      });
+      await proc.exited;
       break;
     }
 
