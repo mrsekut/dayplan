@@ -7,10 +7,11 @@ body { background: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMac
 .pip-btn:hover { background: #2ea043; }
 .timeline { position: relative; margin-left: 60px; }
 .hour-label { position: absolute; left: -60px; width: 50px; text-align: right; font-size: 12px; color: #8b949e; transform: translateY(-8px); }
-.hour-line { position: absolute; left: 0; right: 0; border-top: 1px solid #21262d; }
+.hour-line { position: absolute; left: 0; right: 0; border-top: 1px solid #30363d; z-index: 1; pointer-events: none; }
+.half-hour-line { position: absolute; left: 0; right: 0; border-top: 1px dashed #30363d; z-index: 1; pointer-events: none; }
 .entry { position: absolute; left: 8px; right: 8px; border-radius: 6px; padding: 6px 10px; overflow: hidden; border-left: 3px solid; }
 .entry-fixed { background: #3d1f1f; border-color: #e07e4f; }
-.entry-work { background: #161b22; border-color: #30363d; }
+.entry-work { background: #0d1117; border-color: #30363d; border: 1px solid #21262d; border-left: 3px solid #30363d; }
 .entry-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .task-item { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 12px; }
 .task-item.active { color: #58a6ff; font-weight: 600; }

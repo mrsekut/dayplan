@@ -87,8 +87,16 @@ export function App() {
 
   if (!plan) return <div className="container">Loading...</div>;
 
-  const d = new Date();
-  const nowMin = d.getHours() * 60 + d.getMinutes();
+  // Debug: ?time=10:30 で時刻をオーバーライド
+  const timeParam = new URL(window.location.href).searchParams.get('time');
+  let nowMin: number;
+  if (timeParam) {
+    const [h, m] = timeParam.split(':').map(Number);
+    nowMin = (h ?? 0) * 60 + (m ?? 0);
+  } else {
+    const d = new Date();
+    nowMin = d.getHours() * 60 + d.getMinutes();
+  }
   const totalHeight = (DAY_END - DAY_START) * PX_PER_MIN;
 
   const hours: number[] = [];
@@ -109,6 +117,9 @@ export function App() {
               {String(hr).padStart(2, '0')}:00
             </span>
             <div className="hour-line" style={{ top: minToPos(hr * 60) }} />
+            {hr < Math.floor(DAY_END / 60) && (
+              <div className="half-hour-line" style={{ top: minToPos(hr * 60 + 30) }} />
+            )}
           </div>
         ))}
 
