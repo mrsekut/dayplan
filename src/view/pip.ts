@@ -34,13 +34,22 @@ body { margin:0; padding:8px; background:#0d1117; color:#e6edf3; font-family:-ap
 .pip-btn.skip:hover { background:#6e4000; border-color:#6e4000; }
 `;
 
+function getNowMin(): number {
+  const timeParam = new URL(window.location.href).searchParams.get('time');
+  if (timeParam) {
+    const [h, m] = timeParam.split(':').map(Number);
+    return (h ?? 0) * 60 + (m ?? 0);
+  }
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
+}
+
 function updatePipContent(pw: Window, plan: DayPlan): void {
   if (!plan || pw.closed) return;
   const root = pw.document.getElementById('pip-root');
   if (!root) return;
 
-  const d = new Date();
-  const nowMin = d.getHours() * 60 + d.getMinutes();
+  const nowMin = getNowMin();
 
   let slotRemain = 0;
   let activeTask: { title: string; estimatedMinutes: number } | null = null;
