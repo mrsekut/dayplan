@@ -12,10 +12,7 @@ import {
   getCurrentEntry,
 } from './schedule';
 
-function makeTask(
-  title: string,
-  status: Task['status'] = 'pending',
-): Task {
+function makeTask(title: string, status: Task['status'] = 'pending'): Task {
   return {
     id: `t-${title}`,
     title,
@@ -25,11 +22,7 @@ function makeTask(
   };
 }
 
-function makeSlot(
-  start: string,
-  end: string,
-  tasks: Task[],
-): WorkSlot {
+function makeSlot(start: string, end: string, tasks: Task[]): WorkSlot {
   return { id: 'ws-1', type: 'work', start, end, queue: tasks };
 }
 
@@ -39,10 +32,7 @@ function makePlan(entries: DayPlan['entries']): DayPlan {
 
 describe('activateNextTask', () => {
   test('pendingの最初のタスクをactiveにする', () => {
-    const slot = makeSlot('09:00', '12:00', [
-      makeTask('A'),
-      makeTask('B'),
-    ]);
+    const slot = makeSlot('09:00', '12:00', [makeTask('A'), makeTask('B')]);
     const result = activateNextTask(slot);
     expect(result?.title).toBe('A');
     expect(slot.queue[0]!.status).toBe('active');
@@ -85,9 +75,7 @@ describe('completeCurrentTask', () => {
   });
 
   test('最後のタスク完了 → nextがnull', () => {
-    const slot = makeSlot('09:00', '12:00', [
-      makeTask('A', 'active'),
-    ]);
+    const slot = makeSlot('09:00', '12:00', [makeTask('A', 'active')]);
     const plan = makePlan([slot]);
     const result = completeCurrentTask(plan, 600);
 
@@ -96,9 +84,7 @@ describe('completeCurrentTask', () => {
   });
 
   test('activeなタスクなし → 何もしない', () => {
-    const slot = makeSlot('09:00', '12:00', [
-      makeTask('A', 'completed'),
-    ]);
+    const slot = makeSlot('09:00', '12:00', [makeTask('A', 'completed')]);
     const plan = makePlan([slot]);
     const result = completeCurrentTask(plan, 600);
 
@@ -118,7 +104,14 @@ describe('getCurrentWorkSlot', () => {
 
   test('固定ブロック中 → null', () => {
     const plan = makePlan([
-      { id: 'f-1', type: 'fixed', start: '09:00', end: '10:00', title: 'MTG', kind: 'mtg' },
+      {
+        id: 'f-1',
+        type: 'fixed',
+        start: '09:00',
+        end: '10:00',
+        title: 'MTG',
+        kind: 'mtg',
+      },
     ]);
     const result = getCurrentWorkSlot(plan, 570); // 09:30
 
@@ -126,9 +119,7 @@ describe('getCurrentWorkSlot', () => {
   });
 
   test('どのエントリにも該当しない → null', () => {
-    const plan = makePlan([
-      makeSlot('09:00', '10:00', []),
-    ]);
+    const plan = makePlan([makeSlot('09:00', '10:00', [])]);
     const result = getCurrentWorkSlot(plan, 660); // 11:00
 
     expect(result).toBeNull();
@@ -137,7 +128,14 @@ describe('getCurrentWorkSlot', () => {
 
 describe('getCurrentEntry', () => {
   test('固定ブロック中 → その固定ブロックを返す', () => {
-    const fixed = { id: 'f-1', type: 'fixed' as const, start: '10:00', end: '11:00', title: 'MTG', kind: 'mtg' as const };
+    const fixed = {
+      id: 'f-1',
+      type: 'fixed' as const,
+      start: '10:00',
+      end: '11:00',
+      title: 'MTG',
+      kind: 'mtg' as const,
+    };
     const plan = makePlan([fixed]);
     const result = getCurrentEntry(plan, 630); // 10:30
 
@@ -173,11 +171,16 @@ describe('addTaskToSlot', () => {
   test('現在の作業枠にタスクが追加される', () => {
     const slot = makeSlot('09:00', '12:00', []);
     const plan = makePlan([slot]);
-    const task = addTaskToSlot(plan, {
-      title: '急ぎ対応',
-      estimatedMinutes: 20,
-      kind: 'batch',
-    }, undefined, 600);
+    const task = addTaskToSlot(
+      plan,
+      {
+        title: '急ぎ対応',
+        estimatedMinutes: 20,
+        kind: 'batch',
+      },
+      undefined,
+      600,
+    );
 
     expect(task).not.toBeNull();
     expect(task!.title).toBe('急ぎ対応');
@@ -189,11 +192,16 @@ describe('addTaskToSlot', () => {
     const slot0 = makeSlot('09:00', '10:00', []);
     const slot1 = makeSlot('11:00', '12:00', []);
     const plan = makePlan([slot0, slot1]);
-    addTaskToSlot(plan, {
-      title: 'タスク',
-      estimatedMinutes: 30,
-      kind: 'focus',
-    }, 1, 570);
+    addTaskToSlot(
+      plan,
+      {
+        title: 'タスク',
+        estimatedMinutes: 30,
+        kind: 'focus',
+      },
+      1,
+      570,
+    );
 
     expect(slot0.queue).toHaveLength(0);
     expect(slot1.queue).toHaveLength(1);
@@ -201,13 +209,25 @@ describe('addTaskToSlot', () => {
 
   test('作業枠なし → null', () => {
     const plan = makePlan([
-      { id: 'f-1', type: 'fixed' as const, start: '09:00', end: '18:00', title: 'MTG', kind: 'mtg' as const },
+      {
+        id: 'f-1',
+        type: 'fixed' as const,
+        start: '09:00',
+        end: '18:00',
+        title: 'MTG',
+        kind: 'mtg' as const,
+      },
     ]);
-    const task = addTaskToSlot(plan, {
-      title: 'タスク',
-      estimatedMinutes: 30,
-      kind: 'focus',
-    }, undefined, 600);
+    const task = addTaskToSlot(
+      plan,
+      {
+        title: 'タスク',
+        estimatedMinutes: 30,
+        kind: 'focus',
+      },
+      undefined,
+      600,
+    );
 
     expect(task).toBeNull();
   });
@@ -232,9 +252,7 @@ describe('carryOverTasks', () => {
   });
 
   test('activeタスクはpendingにリセットされて繰越', () => {
-    const pastSlot = makeSlot('09:00', '10:00', [
-      makeTask('A', 'active'),
-    ]);
+    const pastSlot = makeSlot('09:00', '10:00', [makeTask('A', 'active')]);
     const currentSlot = makeSlot('10:00', '12:00', []);
     const plan = makePlan([pastSlot, currentSlot]);
 
@@ -245,9 +263,7 @@ describe('carryOverTasks', () => {
   });
 
   test('completedタスクは移らない', () => {
-    const pastSlot = makeSlot('09:00', '10:00', [
-      makeTask('A', 'completed'),
-    ]);
+    const pastSlot = makeSlot('09:00', '10:00', [makeTask('A', 'completed')]);
     const currentSlot = makeSlot('10:00', '12:00', []);
     const plan = makePlan([pastSlot, currentSlot]);
 

@@ -68,24 +68,33 @@ export function genId(): string {
 
 // ---- Query ----
 
-export function getCurrentEntry(plan: DayPlan, now = nowMinutes()): Entry | null {
+export function getCurrentEntry(
+  plan: DayPlan,
+  now = nowMinutes(),
+): Entry | null {
   return (
     plan.entries.find(
-      (e) => parseTime(e.start) <= now && now < parseTime(e.end),
+      e => parseTime(e.start) <= now && now < parseTime(e.end),
     ) ?? null
   );
 }
 
-export function getCurrentWorkSlot(plan: DayPlan, now = nowMinutes()): WorkSlot | null {
+export function getCurrentWorkSlot(
+  plan: DayPlan,
+  now = nowMinutes(),
+): WorkSlot | null {
   const entry = getCurrentEntry(plan, now);
   return entry?.type === 'work' ? entry : null;
 }
 
 export function getActiveTask(slot: WorkSlot): Task | null {
-  return slot.queue.find((t) => t.status === 'active') ?? null;
+  return slot.queue.find(t => t.status === 'active') ?? null;
 }
 
-export function getNextFixedBlock(plan: DayPlan, now = nowMinutes()): FixedBlock | null {
+export function getNextFixedBlock(
+  plan: DayPlan,
+  now = nowMinutes(),
+): FixedBlock | null {
   return (
     plan.entries.find(
       (e): e is FixedBlock => e.type === 'fixed' && parseTime(e.start) > now,
@@ -93,7 +102,10 @@ export function getNextFixedBlock(plan: DayPlan, now = nowMinutes()): FixedBlock
   );
 }
 
-export function remainingSlotMinutes(plan: DayPlan, now = nowMinutes()): number | null {
+export function remainingSlotMinutes(
+  plan: DayPlan,
+  now = nowMinutes(),
+): number | null {
   const slot = getCurrentWorkSlot(plan, now);
   if (!slot) return null;
   return parseTime(slot.end) - now;
@@ -102,8 +114,8 @@ export function remainingSlotMinutes(plan: DayPlan, now = nowMinutes()): number 
 // ---- Mutations ----
 
 export function activateNextTask(slot: WorkSlot): Task | null {
-  if (slot.queue.some((t) => t.status === 'active')) return null;
-  const next = slot.queue.find((t) => t.status === 'pending');
+  if (slot.queue.some(t => t.status === 'active')) return null;
+  const next = slot.queue.find(t => t.status === 'pending');
   if (!next) return null;
   next.status = 'active';
   return next;
@@ -116,7 +128,7 @@ export function completeCurrentTask(
   const slot = getCurrentWorkSlot(plan, now);
   if (!slot) return { completed: null, next: null };
 
-  const active = slot.queue.find((t) => t.status === 'active');
+  const active = slot.queue.find(t => t.status === 'active');
   if (!active) return { completed: null, next: null };
 
   active.status = 'completed';
@@ -131,7 +143,7 @@ export function skipCurrentTask(
   const slot = getCurrentWorkSlot(plan, now);
   if (!slot) return { skipped: null, next: null };
 
-  const active = slot.queue.find((t) => t.status === 'active');
+  const active = slot.queue.find(t => t.status === 'active');
   if (!active) return { skipped: null, next: null };
 
   active.status = 'skipped';
@@ -141,7 +153,12 @@ export function skipCurrentTask(
 
 export function addTaskToSlot(
   plan: DayPlan,
-  taskInput: { title: string; estimatedMinutes: number; kind: TaskKind; beadId?: string },
+  taskInput: {
+    title: string;
+    estimatedMinutes: number;
+    kind: TaskKind;
+    beadId?: string;
+  },
   slotIndex?: number,
   now = nowMinutes(),
 ): Task | null {
@@ -154,10 +171,10 @@ export function addTaskToSlot(
     target = workSlots[slotIndex];
   } else {
     target = workSlots.find(
-      (ws) => parseTime(ws.start) <= now && now < parseTime(ws.end),
+      ws => parseTime(ws.start) <= now && now < parseTime(ws.end),
     );
     if (!target) {
-      target = workSlots.find((ws) => parseTime(ws.start) > now);
+      target = workSlots.find(ws => parseTime(ws.start) > now);
     }
   }
 
@@ -180,18 +197,18 @@ export function carryOverTasks(plan: DayPlan, now = nowMinutes()): number {
     (e): e is WorkSlot => e.type === 'work',
   );
 
-  const pastSlots = workSlots.filter((ws) => parseTime(ws.end) <= now);
+  const pastSlots = workSlots.filter(ws => parseTime(ws.end) <= now);
   const currentOrFuture =
     workSlots.find(
-      (ws) => parseTime(ws.start) <= now && now < parseTime(ws.end),
-    ) ?? workSlots.find((ws) => parseTime(ws.start) > now);
+      ws => parseTime(ws.start) <= now && now < parseTime(ws.end),
+    ) ?? workSlots.find(ws => parseTime(ws.start) > now);
 
   if (!currentOrFuture) return 0;
 
   let carried = 0;
   for (const slot of pastSlots) {
     const remaining = slot.queue.filter(
-      (t) => t.status === 'pending' || t.status === 'active',
+      t => t.status === 'pending' || t.status === 'active',
     );
     for (const task of remaining) {
       task.status = 'pending';
@@ -199,7 +216,7 @@ export function carryOverTasks(plan: DayPlan, now = nowMinutes()): number {
       carried++;
     }
     slot.queue = slot.queue.filter(
-      (t) => t.status === 'completed' || t.status === 'skipped',
+      t => t.status === 'completed' || t.status === 'skipped',
     );
   }
 

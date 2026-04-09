@@ -14,14 +14,23 @@ function fixed(
 function e(plan: { entries: readonly unknown[] }, i: number) {
   const entry = plan.entries[i];
   if (!entry) throw new Error(`entries[${i}] is undefined`);
-  return entry as { type: string; start: string; end: string; queue?: { title: string; status: string }[] };
+  return entry as {
+    type: string;
+    start: string;
+    end: string;
+    queue?: { title: string; status: string }[];
+  };
 }
 
 function workSlots(plan: { entries: readonly unknown[] }): WorkSlot[] {
   return plan.entries.filter((e): e is WorkSlot => (e as any).type === 'work');
 }
 
-function task(title: string, minutes: number, kind = 'focus' as const): TaskInput {
+function task(
+  title: string,
+  minutes: number,
+  kind = 'focus' as const,
+): TaskInput {
   return { title, estimatedMinutes: minutes, kind };
 }
 
@@ -153,9 +162,7 @@ describe('distributeTasks', () => {
   });
 
   test('容量を超えたら次の枠にあふれる', () => {
-    const plan = buildDayPlan('2026-04-10', [
-      fixed('10:00', '10:30', 'MTG'),
-    ]);
+    const plan = buildDayPlan('2026-04-10', [fixed('10:00', '10:30', 'MTG')]);
     // 09:00-10:00 (60m) work, 10:30-18:00 (450m) work
     const tasks = [
       task('大きいタスク', 90), // 60mの枠に入らない→次の枠へ

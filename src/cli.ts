@@ -75,7 +75,9 @@ function loadPlanOrExit(date: string): DayPlan {
   const plan = loadPlan(date);
   if (!plan) {
     if (jsonMode) {
-      console.log(JSON.stringify({ error: `${date} のスケジュールがありません` }));
+      console.log(
+        JSON.stringify({ error: `${date} のスケジュールがありません` }),
+      );
     } else {
       console.log(`${date} のスケジュールがありません`);
     }
@@ -163,13 +165,24 @@ function printPrime() {
     console.log('```');
     for (const entry of plan.entries) {
       if (entry.type === 'fixed') {
-        console.log(`${entry.start}-${entry.end} [${entry.kind}] ${entry.title}`);
+        console.log(
+          `${entry.start}-${entry.end} [${entry.kind}] ${entry.title}`,
+        );
       } else {
         const duration = parseTime(entry.end) - parseTime(entry.start);
         console.log(`${entry.start}-${entry.end} [作業枠 ${duration}分]`);
         for (const task of entry.queue) {
-          const icon = task.status === 'active' ? '>' : task.status === 'completed' ? 'v' : task.status === 'skipped' ? 'x' : '-';
-          console.log(`  ${icon} ${task.title} (${task.estimatedMinutes}m) [${task.kind}] ${task.status}`);
+          const icon =
+            task.status === 'active'
+              ? '>'
+              : task.status === 'completed'
+                ? 'v'
+                : task.status === 'skipped'
+                  ? 'x'
+                  : '-';
+          console.log(
+            `  ${icon} ${task.title} (${task.estimatedMinutes}m) [${task.kind}] ${task.status}`,
+          );
         }
       }
     }
@@ -206,7 +219,7 @@ async function main() {
         plan = distributeTasks(plan, tasks);
       }
       savePlan(plan);
-      const workSlots = plan.entries.filter((e) => e.type === 'work');
+      const workSlots = plan.entries.filter(e => e.type === 'work');
       const taskCount = workSlots.reduce(
         (sum, e) => sum + (e.type === 'work' ? e.queue.length : 0),
         0,
@@ -216,7 +229,7 @@ async function main() {
           ok: true,
           date,
           entryCount: plan.entries.length,
-          fixedCount: plan.entries.filter((e) => e.type === 'fixed').length,
+          fixedCount: plan.entries.filter(e => e.type === 'fixed').length,
           workSlotCount: workSlots.length,
           taskCount,
         },
@@ -229,18 +242,15 @@ async function main() {
     }
 
     case 'show': {
-      const dateArg = args.find((a) => a !== 'show' && a !== '--json');
+      const dateArg = args.find(a => a !== 'show' && a !== '--json');
       const date = dateArg ?? todayStr();
       const plan = loadPlanOrExit(date);
       const carried = carryOverTasks(plan);
       if (carried > 0) savePlan(plan);
-      output(
-        { ...plan, carriedOver: carried },
-        () => {
-          if (carried > 0) console.log(`📦 ${carried}件のタスクを繰越しました`);
-          printPlan(plan);
-        },
-      );
+      output({ ...plan, carriedOver: carried }, () => {
+        if (carried > 0) console.log(`📦 ${carried}件のタスクを繰越しました`);
+        printPlan(plan);
+      });
       break;
     }
 
@@ -254,11 +264,19 @@ async function main() {
       if (!entry) {
         const nextFixed = getNextFixedBlock(plan);
         output(
-          { currentEntry: null, activeTask: null, remainingMinutes: null, nextFixed, carriedOver: carried },
+          {
+            currentEntry: null,
+            activeTask: null,
+            remainingMinutes: null,
+            nextFixed,
+            carriedOver: carried,
+          },
           () => {
-            if (carried > 0) console.log(`📦 ${carried}件のタスクを繰越しました`);
+            if (carried > 0)
+              console.log(`📦 ${carried}件のタスクを繰越しました`);
             console.log('現在アクティブなエントリなし');
-            if (nextFixed) console.log(`次の予定: ${nextFixed.title} (${nextFixed.start})`);
+            if (nextFixed)
+              console.log(`次の予定: ${nextFixed.title} (${nextFixed.start})`);
           },
         );
         break;
@@ -267,7 +285,13 @@ async function main() {
       if (entry.type === 'fixed') {
         const rem = parseTime(entry.end) - now;
         output(
-          { currentEntry: entry, activeTask: null, remainingMinutes: rem, nextFixed: getNextFixedBlock(plan), carriedOver: carried },
+          {
+            currentEntry: entry,
+            activeTask: null,
+            remainingMinutes: rem,
+            nextFixed: getNextFixedBlock(plan),
+            carriedOver: carried,
+          },
           () => {
             console.log(`🗣️ ${entry.title}`);
             console.log(`   ${entry.start} - ${entry.end} (残り${rem}分)`);
@@ -286,21 +310,36 @@ async function main() {
       const nextFixed = getNextFixedBlock(plan);
 
       output(
-        { currentEntry: slot, activeTask: active, remainingMinutes: remaining, nextFixed, carriedOver: carried },
+        {
+          currentEntry: slot,
+          activeTask: active,
+          remainingMinutes: remaining,
+          nextFixed,
+          carriedOver: carried,
+        },
         () => {
           if (carried > 0) console.log(`📦 ${carried}件のタスクを繰越しました`);
-          console.log(`📂 作業枠: ${slot.start} - ${slot.end} (残り${remaining}分)`);
+          console.log(
+            `📂 作業枠: ${slot.start} - ${slot.end} (残り${remaining}分)`,
+          );
           if (active) {
-            console.log(`▶ ${active.title} (${active.estimatedMinutes}m) [${active.kind}]`);
+            console.log(
+              `▶ ${active.title} (${active.estimatedMinutes}m) [${active.kind}]`,
+            );
           } else {
-            const allDone = slot.queue.every((t) => t.status === 'completed' || t.status === 'skipped');
+            const allDone = slot.queue.every(
+              t => t.status === 'completed' || t.status === 'skipped',
+            );
             if (allDone && slot.queue.length > 0) {
-              console.log(`✅ スロット完了! 次の予定まで ${remaining}分 余裕あり`);
+              console.log(
+                `✅ スロット完了! 次の予定まで ${remaining}分 余裕あり`,
+              );
             } else {
               console.log('キューにタスクがありません');
             }
           }
-          if (nextFixed) console.log(`次の予定: ${nextFixed.title} (${nextFixed.start})`);
+          if (nextFixed)
+            console.log(`次の予定: ${nextFixed.title} (${nextFixed.start})`);
         },
       );
       break;
@@ -313,21 +352,20 @@ async function main() {
       if (slot) activateNextTask(slot);
       const result = completeCurrentTask(plan);
       savePlan(plan);
-      output(
-        { completed: result.completed, next: result.next },
-        () => {
-          if (result.completed) {
-            console.log(`✅ 完了: ${result.completed.title}`);
-            if (result.next) {
-              console.log(`→ 次: ${result.next.title} (${result.next.estimatedMinutes}m)`);
-            } else {
-              console.log('キューにタスクがありません');
-            }
+      output({ completed: result.completed, next: result.next }, () => {
+        if (result.completed) {
+          console.log(`✅ 完了: ${result.completed.title}`);
+          if (result.next) {
+            console.log(
+              `→ 次: ${result.next.title} (${result.next.estimatedMinutes}m)`,
+            );
           } else {
-            console.log('完了するタスクがありません');
+            console.log('キューにタスクがありません');
           }
-        },
-      );
+        } else {
+          console.log('完了するタスクがありません');
+        }
+      });
       break;
     }
 
@@ -338,21 +376,20 @@ async function main() {
       if (slot) activateNextTask(slot);
       const result = skipCurrentTask(plan);
       savePlan(plan);
-      output(
-        { skipped: result.skipped, next: result.next },
-        () => {
-          if (result.skipped) {
-            console.log(`⏭ スキップ: ${result.skipped.title}`);
-            if (result.next) {
-              console.log(`→ 次: ${result.next.title} (${result.next.estimatedMinutes}m)`);
-            } else {
-              console.log('キューにタスクがありません');
-            }
+      output({ skipped: result.skipped, next: result.next }, () => {
+        if (result.skipped) {
+          console.log(`⏭ スキップ: ${result.skipped.title}`);
+          if (result.next) {
+            console.log(
+              `→ 次: ${result.next.title} (${result.next.estimatedMinutes}m)`,
+            );
           } else {
-            console.log('スキップするタスクがありません');
+            console.log('キューにタスクがありません');
           }
-        },
-      );
+        } else {
+          console.log('スキップするタスクがありません');
+        }
+      });
       break;
     }
 
@@ -361,24 +398,28 @@ async function main() {
       const data = JSON.parse(input);
       const plan = loadPlanOrExit(todayStr());
       carryOverTasks(plan);
-      const task = addTaskToSlot(plan, {
-        title: data.title,
-        estimatedMinutes: data.estimatedMinutes ?? 30,
-        kind: data.kind ?? 'other',
-        beadId: data.beadId,
-      }, data.slotIndex);
+      const task = addTaskToSlot(
+        plan,
+        {
+          title: data.title,
+          estimatedMinutes: data.estimatedMinutes ?? 30,
+          kind: data.kind ?? 'other',
+          beadId: data.beadId,
+        },
+        data.slotIndex,
+      );
       if (task) {
         const slot = getCurrentWorkSlot(plan);
         if (slot) activateNextTask(slot);
         savePlan(plan);
-        output(
-          { added: task },
-          () => console.log(`➕ 追加: ${task.title} (${task.estimatedMinutes}m) [${task.kind}]`),
+        output({ added: task }, () =>
+          console.log(
+            `➕ 追加: ${task.title} (${task.estimatedMinutes}m) [${task.kind}]`,
+          ),
         );
       } else {
-        output(
-          { added: null, error: '追加先の作業枠がありません' },
-          () => console.log('追加先の作業枠がありません'),
+        output({ added: null, error: '追加先の作業枠がありません' }, () =>
+          console.log('追加先の作業枠がありません'),
         );
       }
       break;
@@ -395,7 +436,7 @@ async function main() {
   }
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error('Error:', err.message ?? err);
   process.exit(1);
 });
