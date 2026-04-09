@@ -4,6 +4,13 @@ import {
   parseTime,
   todayStr,
   genId,
+  getCurrentEntry,
+  getCurrentWorkSlot,
+  getActiveTask,
+  getNextFixedBlock,
+  remainingSlotMinutes,
+  activateNextTask,
+  completeCurrentTask,
 } from './schedule';
 import { buildDayPlan, distributeTasks } from './planner';
 import { savePlan, loadPlan } from './storage';
@@ -59,6 +66,8 @@ function printHelp() {
 使い方:
   dayplan set              スケジュールをstdinのJSONから設定
   dayplan show [date]      スケジュール表示
+  dayplan status           現在のタスクと残り時間を表示
+  dayplan complete         現在のタスクを完了にする
   dayplan help             このヘルプを表示
 
 入力フォーマット (set):
@@ -110,6 +119,79 @@ async function main() {
         process.exit(1);
       }
       printPlan(plan);
+      break;
+    }
+
+    case 'status': {
+      const plan = loadPlan(todayStr());
+      if (!plan) {
+        console.log('今日のスケジュールがありません');
+        process.exit(1);
+      }
+      const entry = getCurrentEntry(plan);
+      if (!entry) {
+        const nextFixed = getNextFixedBlock(plan);
+        console.log('現在アクティブなエントリなし');
+        if (nextFixed) {
+          console.log(`次の予定: ${nextFixed.title} (${nextFixed.start})`);
+        }
+        break;
+      }
+      if (entry.type === 'fixed') {
+        const rem = parseTime(entry.end) - parseTime(
+          `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`,
+        );
+        console.log(`🗣️ ${entry.title}`);
+        console.log(`   ${entry.start} - ${entry.end} (残り${rem}分)`);
+        break;
+      }
+      // WorkSlot
+      const slot = getCurrentWorkSlot(plan);
+      if (!slot) break;
+      activateNextTask(slot);
+      savePlan(plan);
+      const remaining = remainingSlotMinutes(plan);
+      const active = getActiveTask(slot);
+      const nextFixed = getNextFixedBlock(plan);
+      console.log(`📂 作業枠: ${slot.start} - ${slot.end} (残り${remaining}分)`);
+      if (active) {
+        console.log(`▶ ${active.title} (${active.estimatedMinutes}m) [${active.kind}]`);
+      } else {
+        const allDone = slot.queue.every(
+          (t) => t.status === 'completed' || t.status === 'skipped',
+        );
+        if (allDone && slot.queue.length > 0) {
+          console.log(`✅ スロット完了! 次の予定まで ${remaining}分 余裕あり`);
+        } else {
+          console.log('キューにタスクがありません');
+        }
+      }
+      if (nextFixed) {
+        console.log(`次の予定: ${nextFixed.title} (${nextFixed.start})`);
+      }
+      break;
+    }
+
+    case 'complete': {
+      const plan = loadPlan(todayStr());
+      if (!plan) {
+        console.log('今日のスケジュールがありません');
+        process.exit(1);
+      }
+      const slot = getCurrentWorkSlot(plan);
+      if (slot) activateNextTask(slot);
+      const result = completeCurrentTask(plan);
+      savePlan(plan);
+      if (result.completed) {
+        console.log(`✅ 完了: ${result.completed.title}`);
+        if (result.next) {
+          console.log(`→ 次: ${result.next.title} (${result.next.estimatedMinutes}m)`);
+        } else {
+          console.log('キューにタスクがありません');
+        }
+      } else {
+        console.log('完了するタスクがありません');
+      }
       break;
     }
 
