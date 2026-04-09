@@ -45,8 +45,19 @@ Bun.serve({
       const plan = loadPlan(d);
       if (!plan) return Response.json({ error: 'not found' }, { status: 404 });
       carryOverTasks(plan);
+      // 現在の作業枠、またはactiveがなければ最初の作業枠のタスクをactivate
       const slot = getCurrentWorkSlot(plan);
-      if (slot) activateNextTask(slot);
+      if (slot) {
+        activateNextTask(slot);
+      } else {
+        // 時間外の場合でも、最初のpendingがある作業枠をactivate
+        for (const e of plan.entries) {
+          if (e.type === 'work' && e.queue.some(t => t.status === 'pending') && !e.queue.some(t => t.status === 'active')) {
+            activateNextTask(e);
+            break;
+          }
+        }
+      }
       savePlan(plan);
       return Response.json(plan);
     }
