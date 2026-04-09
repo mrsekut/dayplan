@@ -123,3 +123,85 @@ export function completeCurrentTask(
   const next = activateNextTask(slot);
   return { completed: active, next };
 }
+
+export function skipCurrentTask(
+  plan: DayPlan,
+  now = nowMinutes(),
+): { skipped: Task | null; next: Task | null } {
+  const slot = getCurrentWorkSlot(plan, now);
+  if (!slot) return { skipped: null, next: null };
+
+  const active = slot.queue.find((t) => t.status === 'active');
+  if (!active) return { skipped: null, next: null };
+
+  active.status = 'skipped';
+  const next = activateNextTask(slot);
+  return { skipped: active, next };
+}
+
+export function addTaskToSlot(
+  plan: DayPlan,
+  taskInput: { title: string; estimatedMinutes: number; kind: TaskKind; beadId?: string },
+  slotIndex?: number,
+  now = nowMinutes(),
+): Task | null {
+  const workSlots = plan.entries.filter(
+    (e): e is WorkSlot => e.type === 'work',
+  );
+  let target: WorkSlot | undefined;
+
+  if (slotIndex !== undefined) {
+    target = workSlots[slotIndex];
+  } else {
+    target = workSlots.find(
+      (ws) => parseTime(ws.start) <= now && now < parseTime(ws.end),
+    );
+    if (!target) {
+      target = workSlots.find((ws) => parseTime(ws.start) > now);
+    }
+  }
+
+  if (!target) return null;
+
+  const task: Task = {
+    id: genId(),
+    title: taskInput.title,
+    estimatedMinutes: taskInput.estimatedMinutes,
+    kind: taskInput.kind,
+    status: 'pending',
+    ...(taskInput.beadId ? { beadId: taskInput.beadId } : {}),
+  };
+  target.queue.push(task);
+  return task;
+}
+
+export function carryOverTasks(plan: DayPlan, now = nowMinutes()): number {
+  const workSlots = plan.entries.filter(
+    (e): e is WorkSlot => e.type === 'work',
+  );
+
+  const pastSlots = workSlots.filter((ws) => parseTime(ws.end) <= now);
+  const currentOrFuture =
+    workSlots.find(
+      (ws) => parseTime(ws.start) <= now && now < parseTime(ws.end),
+    ) ?? workSlots.find((ws) => parseTime(ws.start) > now);
+
+  if (!currentOrFuture) return 0;
+
+  let carried = 0;
+  for (const slot of pastSlots) {
+    const remaining = slot.queue.filter(
+      (t) => t.status === 'pending' || t.status === 'active',
+    );
+    for (const task of remaining) {
+      task.status = 'pending';
+      currentOrFuture.queue.push(task);
+      carried++;
+    }
+    slot.queue = slot.queue.filter(
+      (t) => t.status === 'completed' || t.status === 'skipped',
+    );
+  }
+
+  return carried;
+}

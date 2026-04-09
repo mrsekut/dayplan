@@ -11,6 +11,9 @@ import {
   remainingSlotMinutes,
   activateNextTask,
   completeCurrentTask,
+  skipCurrentTask,
+  addTaskToSlot,
+  carryOverTasks,
 } from './schedule';
 import { buildDayPlan, distributeTasks } from './planner';
 import { savePlan, loadPlan } from './storage';
@@ -68,6 +71,8 @@ function printHelp() {
   dayplan show [date]      スケジュール表示
   dayplan status           現在のタスクと残り時間を表示
   dayplan complete         現在のタスクを完了にする
+  dayplan skip             現在のタスクをスキップ
+  dayplan add-task         タスクをキューに追加 (JSON from stdin)
   dayplan help             このヘルプを表示
 
 入力フォーマット (set):
@@ -118,6 +123,11 @@ async function main() {
         console.log(`${date} のスケジュールがありません`);
         process.exit(1);
       }
+      const carried = carryOverTasks(plan);
+      if (carried > 0) {
+        savePlan(plan);
+        console.log(`📦 ${carried}件のタスクを繰越しました`);
+      }
       printPlan(plan);
       break;
     }
@@ -127,6 +137,11 @@ async function main() {
       if (!plan) {
         console.log('今日のスケジュールがありません');
         process.exit(1);
+      }
+      const carried = carryOverTasks(plan);
+      if (carried > 0) {
+        savePlan(plan);
+        console.log(`📦 ${carried}件のタスクを繰越しました`);
       }
       const entry = getCurrentEntry(plan);
       if (!entry) {
@@ -178,6 +193,7 @@ async function main() {
         console.log('今日のスケジュールがありません');
         process.exit(1);
       }
+      carryOverTasks(plan);
       const slot = getCurrentWorkSlot(plan);
       if (slot) activateNextTask(slot);
       const result = completeCurrentTask(plan);
@@ -191,6 +207,56 @@ async function main() {
         }
       } else {
         console.log('完了するタスクがありません');
+      }
+      break;
+    }
+
+    case 'skip': {
+      const plan = loadPlan(todayStr());
+      if (!plan) {
+        console.log('今日のスケジュールがありません');
+        process.exit(1);
+      }
+      carryOverTasks(plan);
+      const slot = getCurrentWorkSlot(plan);
+      if (slot) activateNextTask(slot);
+      const result = skipCurrentTask(plan);
+      savePlan(plan);
+      if (result.skipped) {
+        console.log(`⏭ スキップ: ${result.skipped.title}`);
+        if (result.next) {
+          console.log(`→ 次: ${result.next.title} (${result.next.estimatedMinutes}m)`);
+        } else {
+          console.log('キューにタスクがありません');
+        }
+      } else {
+        console.log('スキップするタスクがありません');
+      }
+      break;
+    }
+
+    case 'add-task': {
+      const input = await readStdin();
+      const data = JSON.parse(input);
+      const plan = loadPlan(todayStr());
+      if (!plan) {
+        console.log('今日のスケジュールがありません');
+        process.exit(1);
+      }
+      carryOverTasks(plan);
+      const task = addTaskToSlot(plan, {
+        title: data.title,
+        estimatedMinutes: data.estimatedMinutes ?? 30,
+        kind: data.kind ?? 'other',
+        beadId: data.beadId,
+      }, data.slotIndex);
+      if (task) {
+        const slot = getCurrentWorkSlot(plan);
+        if (slot) activateNextTask(slot);
+        savePlan(plan);
+        console.log(`➕ 追加: ${task.title} (${task.estimatedMinutes}m) [${task.kind}]`);
+      } else {
+        console.log('追加先の作業枠がありません');
       }
       break;
     }
