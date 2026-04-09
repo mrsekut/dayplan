@@ -64,37 +64,37 @@
 ### データモデル
 
 ```typescript
-type TaskKind = "focus" | "batch" | "mtg" | "other";
+type TaskKind = 'focus' | 'batch' | 'mtg' | 'other';
 
 type FixedBlock = {
-	id: string;
-	type: "fixed";
-	start: string; // "HH:MM"
-	end: string; // "HH:MM"
-	title: string;
-	kind: TaskKind;
+  id: string;
+  type: 'fixed';
+  start: string; // "HH:MM"
+  end: string; // "HH:MM"
+  title: string;
+  kind: TaskKind;
 };
 
 type Task = {
-	id: string;
-	title: string;
-	estimatedMinutes: number;
-	kind: TaskKind;
-	status: "pending" | "active" | "completed" | "skipped";
-	beadId?: string; // 将来: Beads連携
+  id: string;
+  title: string;
+  estimatedMinutes: number;
+  kind: TaskKind;
+  status: 'pending' | 'active' | 'completed' | 'skipped';
+  beadId?: string; // 将来: Beads連携
 };
 
 type WorkSlot = {
-	id: string;
-	type: "work";
-	start: string; // "HH:MM"（固定ブロックから自動算出）
-	end: string; // "HH:MM"（固定ブロックから自動算出）
-	queue: Task[];
+  id: string;
+  type: 'work';
+  start: string; // "HH:MM"（固定ブロックから自動算出）
+  end: string; // "HH:MM"（固定ブロックから自動算出）
+  queue: Task[];
 };
 
 type DayPlan = {
-	date: string; // "YYYY-MM-DD"
-	entries: (FixedBlock | WorkSlot)[];
+  date: string; // "YYYY-MM-DD"
+  entries: (FixedBlock | WorkSlot)[];
 };
 ```
 
@@ -126,15 +126,15 @@ dayplan help             # ヘルプ
 
 ```json
 {
-	"date": "2026-04-10",
-	"fixedBlocks": [
-		{ "start": "11:30", "end": "12:00", "title": "1on1", "kind": "mtg" },
-		{ "start": "15:00", "end": "16:00", "title": "採用面接", "kind": "mtg" }
-	],
-	"tasks": [
-		{ "title": "機能Aの設計", "estimatedMinutes": 60, "kind": "focus" },
-		{ "title": "Slack返信まとめ", "estimatedMinutes": 30, "kind": "batch" }
-	]
+  "date": "2026-04-10",
+  "fixedBlocks": [
+    { "start": "11:30", "end": "12:00", "title": "1on1", "kind": "mtg" },
+    { "start": "15:00", "end": "16:00", "title": "採用面接", "kind": "mtg" }
+  ],
+  "tasks": [
+    { "title": "機能Aの設計", "estimatedMinutes": 60, "kind": "focus" },
+    { "title": "Slack返信まとめ", "estimatedMinutes": 30, "kind": "batch" }
+  ]
 }
 ```
 
