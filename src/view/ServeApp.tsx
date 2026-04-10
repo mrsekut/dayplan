@@ -161,8 +161,16 @@ export function ServeApp({ date }: Props) {
   }
 
   const { blocks } = data;
+
+  const [debug] = useState(() =>
+    new URLSearchParams(window.location.search).has('debug'),
+  );
+  const [sliderValue, setSliderValue] = useState(780);
+  const [useSimulated, setUseSimulated] = useState(debug);
+
   const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const realNowMin = now.getHours() * 60 + now.getMinutes();
+  const nowMin = useSimulated ? sliderValue : realNowMin;
 
   if (blocks.length === 0) {
     return (
@@ -270,6 +278,32 @@ export function ServeApp({ date }: Props) {
           />
         )}
       </div>
+
+      {debug && (
+        <div className="debug-bar">
+          <label>シミュレート:</label>
+          <input
+            type="range"
+            min={0}
+            max={1440}
+            step={1}
+            value={sliderValue}
+            onChange={e => {
+              setSliderValue(Number(e.target.value));
+              setUseSimulated(true);
+            }}
+          />
+          <span className="debug-time">
+            {pad(Math.floor(sliderValue / 60))}:{pad(sliderValue % 60)}
+          </span>
+          <button
+            className={useSimulated ? '' : 'active'}
+            onClick={() => setUseSimulated(v => !v)}
+          >
+            {useSimulated ? 'リアルタイム' : 'リアルタイム中'}
+          </button>
+        </div>
+      )}
     </>
   );
 }
