@@ -156,17 +156,17 @@ export function ServeApp({ date }: Props) {
     [date],
   );
 
-  if (!data) {
-    return <div className="loading">{error ?? '読み込み中...'}</div>;
-  }
-
-  const { blocks } = data;
-
   const [debug] = useState(() =>
     new URLSearchParams(window.location.search).has('debug'),
   );
   const [sliderValue, setSliderValue] = useState(780);
   const [useSimulated, setUseSimulated] = useState(debug);
+
+  if (!data) {
+    return <div className="loading">{error ?? '読み込み中...'}</div>;
+  }
+
+  const { blocks } = data;
 
   const now = new Date();
   const realNowMin = now.getHours() * 60 + now.getMinutes();
