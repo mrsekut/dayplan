@@ -17,7 +17,10 @@ export function formatSchedule(schedule: Schedule): string {
 
   for (const b of schedule.blocks) {
     const dur = timeToMin(b.end) - timeToMin(b.start);
-    const status = b.status === 'completed' ? '✓' : ' ';
+    const status =
+      b.status === 'completed' ? '✓' :
+      b.status === 'active' ? '▶' :
+      b.status === 'skipped' ? '✗' : ' ';
     lines.push(
       padEnd(`${b.start}-${b.end}`, 14) +
         padEnd(b.task, 36) +
