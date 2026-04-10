@@ -21,6 +21,7 @@ export function ServeApp({ date }: Props) {
     complete: (task: string) => Promise<void>;
     skip: (task: string) => Promise<void>;
   }>({ complete: async () => {}, skip: async () => {} });
+  const nowMinRef = useRef(0);
 
   const reload = useCallback(async () => {
     try {
@@ -52,6 +53,7 @@ export function ServeApp({ date }: Props) {
           if (action === 'complete') await actionsRef.current.complete(task);
           else if (action === 'skip') await actionsRef.current.skip(task);
         },
+        () => nowMinRef.current,
       );
       pipSetupDone.current = true;
     }
@@ -171,6 +173,7 @@ export function ServeApp({ date }: Props) {
   const now = new Date();
   const realNowMin = now.getHours() * 60 + now.getMinutes();
   const nowMin = useSimulated ? sliderValue : realNowMin;
+  nowMinRef.current = nowMin;
 
   if (blocks.length === 0) {
     return (

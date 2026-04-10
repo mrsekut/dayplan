@@ -25,14 +25,10 @@ body { margin:0; padding:8px; background:#0d1117; color:#e6edf3; font-family:-ap
 .pip-btn.skip:hover { background:#6e4000; border-color:#6e4000; }
 `;
 
-function getNowMin(): number {
-  const d = new Date();
-  return d.getHours() * 60 + d.getMinutes();
-}
-
 function updatePipContent(
   pw: Window,
   getBlocks: () => ScheduleBlock[],
+  getNowMin: () => number,
 ): void {
   if (pw.closed) return;
   const root = pw.document.getElementById('pip-root');
@@ -81,6 +77,7 @@ export function setupPip(
   btn: HTMLButtonElement,
   getBlocks: () => ScheduleBlock[],
   onAction: (action: string, task: string) => Promise<void>,
+  getNowMin: () => number,
 ): void {
   let pipWindow: Window | null = null;
   let pipInterval: ReturnType<typeof setInterval> | null = null;
@@ -132,7 +129,7 @@ export function setupPip(
         );
         if (current) {
           await onAction(action, current.task);
-          updatePipContent(pipWindow!, getBlocks);
+          updatePipContent(pipWindow!, getBlocks, getNowMin);
         }
       }
     });
@@ -140,13 +137,13 @@ export function setupPip(
     btn.classList.add('active');
     btn.textContent = 'PiP ON';
 
-    updatePipContent(pipWindow, getBlocks);
+    updatePipContent(pipWindow, getBlocks, getNowMin);
     pipInterval = setInterval(() => {
       if (!pipWindow || pipWindow.closed) {
         closePip();
         return;
       }
-      updatePipContent(pipWindow, getBlocks);
+      updatePipContent(pipWindow, getBlocks, getNowMin);
     }, 1000);
 
     pipWindow.addEventListener('pagehide', () => closePip());
