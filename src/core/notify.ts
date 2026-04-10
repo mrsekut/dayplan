@@ -20,7 +20,7 @@ export function calcNotifyPoints(
     const notifyMin = endMin - 5;
 
     if (notifyMin <= nowMin) continue;
-    if (block.kind === '-') continue;
+    if (block.kind === 'other') continue;
 
     const next = schedule.blocks[i + 1];
     const message = next

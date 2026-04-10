@@ -105,6 +105,18 @@ export function ServeApp({ date }: Props) {
     [date],
   );
 
+  const handleSkip = useCallback(
+    async (task: string) => {
+      try {
+        const d = await api.skipTask(date, task);
+        setData(d);
+      } catch (e: unknown) {
+        setError((e as Error).message);
+      }
+    },
+    [date],
+  );
+
   const handleUpdateTime = useCallback(
     async (task: string, start: string, end: string) => {
       try {
@@ -185,10 +197,9 @@ export function ServeApp({ date }: Props) {
       )}
 
       <div className="legend">
-        <LegendItem color="#2d2b55" label="他人影響" />
-        <LegendItem color="#1e3a2f" label="思考系" />
-        <LegendItem color="#1e2d4a" label="作業系" />
-        <LegendItem color="#3a1e1e" label="MTG" />
+        <LegendItem color="#1e2d4a" label="focus" />
+        <LegendItem color="#1e3a2f" label="batch" />
+        <LegendItem color="#3a1e1e" label="mtg" />
       </div>
 
       <div
@@ -220,6 +231,7 @@ export function ServeApp({ date }: Props) {
             onSwapUp={() => handleSwap(i, i - 1)}
             onSwapDown={() => handleSwap(i, i + 1)}
             onComplete={() => handleComplete(item.task)}
+            onSkip={() => handleSkip(item.task)}
             onCarry={() => handleCarry(item.task)}
             onUpdateTime={(start: string, end: string) =>
               handleUpdateTime(item.task, start, end)
@@ -258,6 +270,7 @@ function InteractiveBlock({
   onSwapUp,
   onSwapDown,
   onComplete,
+  onSkip,
   onCarry,
   onUpdateTime,
   onAddSubtask,
@@ -276,6 +289,7 @@ function InteractiveBlock({
   onSwapUp: () => void;
   onSwapDown: () => void;
   onComplete: () => void;
+  onSkip: () => void;
   onCarry: () => void;
   onUpdateTime: (start: string, end: string) => void;
   onAddSubtask: (title: string) => void;
@@ -292,14 +306,18 @@ function InteractiveBlock({
 
   const isCurrent = nowMin >= startMin && nowMin < endMin;
   const isPast = nowMin >= endMin;
+  const isActive = item.status === 'active';
   const isCompleted = item.status === 'completed';
+  const isSkipped = item.status === 'skipped';
 
   const classes = [
     'block',
     'interactive',
     isCurrent && 'current',
     isPast && 'past',
+    isActive && 'active',
     isCompleted && 'completed',
+    isSkipped && 'skipped',
     isExpanded && 'expanded',
   ]
     .filter(Boolean)
@@ -378,7 +396,7 @@ function InteractiveBlock({
           </span>
         )}
         <span className="task-name">{item.task}</span>
-        {item.kind !== '-' && <span className="kind-badge">{item.kind}</span>}
+        <span className="kind-badge">{item.kind}</span>
         <span className="duration">{dur}m</span>
       </div>
 
@@ -405,7 +423,7 @@ function InteractiveBlock({
         >
           ↓
         </button>
-        {!isCompleted && (
+        {!isCompleted && !isSkipped && (
           <button
             className="action-btn complete-btn"
             onClick={e => {
@@ -417,7 +435,19 @@ function InteractiveBlock({
             ✓
           </button>
         )}
-        {!isCompleted && (
+        {!isCompleted && !isSkipped && (
+          <button
+            className="action-btn skip-btn"
+            onClick={e => {
+              e.stopPropagation();
+              onSkip();
+            }}
+            title="スキップ"
+          >
+            ⏭
+          </button>
+        )}
+        {!isCompleted && !isSkipped && (
           <button
             className="action-btn carry-btn"
             onClick={e => {

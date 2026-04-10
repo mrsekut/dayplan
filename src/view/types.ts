@@ -1,5 +1,5 @@
-export type TaskKind = '他人影響' | '思考系' | '作業系' | 'MTG' | '-';
-export type BlockStatus = 'pending' | 'completed';
+export type TaskKind = 'focus' | 'batch' | 'mtg' | 'other';
+export type BlockStatus = 'pending' | 'active' | 'completed' | 'skipped';
 
 export type SubTask = {
   title: string;
@@ -12,6 +12,7 @@ export type ScheduleBlock = {
   task: string;
   kind: TaskKind;
   status: BlockStatus;
+  beadId?: string;
   subtasks?: SubTask[];
 };
 

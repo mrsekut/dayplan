@@ -16,21 +16,21 @@ const sample: Schedule = {
       start: '09:30',
       end: '10:00',
       task: 'PRレビュー',
-      kind: '他人影響',
+      kind: 'focus',
       status: 'pending',
     },
     {
       start: '10:00',
       end: '10:30',
       task: '設計',
-      kind: '思考系',
+      kind: 'focus',
       status: 'pending',
     },
     {
       start: '10:30',
       end: '11:00',
       task: '実装',
-      kind: '作業系',
+      kind: 'batch',
       status: 'completed',
     },
   ],
@@ -51,7 +51,7 @@ describe('parseSchedule', () => {
       blocks: [{ start: '09:00', end: '09:30', task: 'test' }],
     });
     const result = parseSchedule(json);
-    expect(result.blocks[0]!.kind).toBe('-');
+    expect(result.blocks[0]!.kind).toBe('other');
     expect(result.blocks[0]!.status).toBe('pending');
   });
 
@@ -88,7 +88,7 @@ describe('addBlock', () => {
       start: '09:45',
       end: '10:00',
       task: '割り込み',
-      kind: '-',
+      kind: 'other',
       status: 'pending',
     };
     const result = addBlock(sample, block);

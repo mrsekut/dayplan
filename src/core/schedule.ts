@@ -1,8 +1,8 @@
 /** タスクの種類 */
-export type TaskKind = '他人影響' | '思考系' | '作業系' | 'MTG' | '-';
+export type TaskKind = 'focus' | 'batch' | 'mtg' | 'other';
 
 /** タスクの状態 */
-export type BlockStatus = 'pending' | 'completed';
+export type BlockStatus = 'pending' | 'active' | 'completed' | 'skipped';
 
 /** サブタスク */
 export type SubTask = {
@@ -17,6 +17,7 @@ export type TimeBlock = {
   task: string;
   kind: TaskKind;
   status: BlockStatus;
+  beadId?: string;
   subtasks?: SubTask[];
 };
 
@@ -26,7 +27,7 @@ export type Schedule = {
   blocks: TimeBlock[];
 };
 
-const VALID_KINDS: TaskKind[] = ['他人影響', '思考系', '作業系', 'MTG', '-'];
+const VALID_KINDS: TaskKind[] = ['focus', 'batch', 'mtg', 'other'];
 const TIME_RE = /^\d{2}:\d{2}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -52,7 +53,7 @@ function validateBlock(block: unknown, index: number): TimeBlock {
   validateTime(b['start'], `blocks[${index}].start`);
   validateTime(b['end'], `blocks[${index}].end`);
 
-  const kind = (b['kind'] ?? '-') as string;
+  const kind = (b['kind'] ?? 'other') as string;
   if (!VALID_KINDS.includes(kind as TaskKind)) {
     throw new Error(
       `blocks[${index}].kind: "${kind}" is not valid (${VALID_KINDS.join(', ')})`,
@@ -60,9 +61,10 @@ function validateBlock(block: unknown, index: number): TimeBlock {
   }
 
   const status = (b['status'] ?? 'pending') as string;
-  if (status !== 'pending' && status !== 'completed') {
+  const VALID_STATUSES: BlockStatus[] = ['pending', 'active', 'completed', 'skipped'];
+  if (!VALID_STATUSES.includes(status as BlockStatus)) {
     throw new Error(
-      `blocks[${index}].status: "${status}" is not valid (pending, completed)`,
+      `blocks[${index}].status: "${status}" is not valid (${VALID_STATUSES.join(', ')})`,
     );
   }
 
@@ -82,12 +84,15 @@ function validateBlock(block: unknown, index: number): TimeBlock {
     });
   }
 
+  const beadId = typeof b['beadId'] === 'string' ? b['beadId'] : undefined;
+
   return {
     start: b['start'],
     end: b['end'],
     task: b['task'],
     kind: kind as TaskKind,
     status: status as BlockStatus,
+    ...(beadId ? { beadId } : {}),
     ...(parsedSubtasks ? { subtasks: parsedSubtasks } : {}),
   };
 }
@@ -151,6 +156,30 @@ export function completeBlock(schedule: Schedule, taskName: string): Schedule {
   if (blocks.every((b, i) => b === schedule.blocks[i])) {
     throw new Error(`Task not found: "${taskName}"`);
   }
+  return { ...schedule, blocks };
+}
+
+/** タスクをactiveにする */
+export function activateBlock(schedule: Schedule, taskName: string): Schedule {
+  let found = false;
+  const blocks = schedule.blocks.map(b => {
+    if (b.task !== taskName) return b;
+    found = true;
+    return { ...b, status: 'active' as const };
+  });
+  if (!found) throw new Error(`Task not found: "${taskName}"`);
+  return { ...schedule, blocks };
+}
+
+/** タスクをスキップする */
+export function skipBlock(schedule: Schedule, taskName: string): Schedule {
+  let found = false;
+  const blocks = schedule.blocks.map(b => {
+    if (b.task !== taskName) return b;
+    found = true;
+    return { ...b, status: 'skipped' as const };
+  });
+  if (!found) throw new Error(`Task not found: "${taskName}"`);
   return { ...schedule, blocks };
 }
 

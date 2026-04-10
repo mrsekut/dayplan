@@ -7,6 +7,8 @@ import {
   addBlock,
   removeBlock,
   completeBlock,
+  activateBlock,
+  skipBlock,
   updateBlockTime,
   carryOverBlocks,
   type Schedule,
@@ -97,6 +99,37 @@ export async function serveCommand(date?: string): Promise<void> {
         const { task } = (await req.json()) as { task: string };
         let schedule = await getSchedule(d);
         schedule = completeBlock(schedule, task);
+        await save(schedule);
+        // beads連携: beadIdがあればbd closeを実行
+        const completed = schedule.blocks.find(b => b.task === task);
+        if (completed?.beadId) {
+          Bun.spawn(['bd', 'close', completed.beadId]);
+        }
+        return json(schedule);
+      }
+
+      // POST /api/schedule/:date/activate
+      if (
+        req.method === 'POST' &&
+        url.pathname.match(/^\/api\/schedule\/[^/]+\/activate$/)
+      ) {
+        const d = url.pathname.split('/')[3]!;
+        const { task } = (await req.json()) as { task: string };
+        let schedule = await getSchedule(d);
+        schedule = activateBlock(schedule, task);
+        await save(schedule);
+        return json(schedule);
+      }
+
+      // POST /api/schedule/:date/skip
+      if (
+        req.method === 'POST' &&
+        url.pathname.match(/^\/api\/schedule\/[^/]+\/skip$/)
+      ) {
+        const d = url.pathname.split('/')[3]!;
+        const { task } = (await req.json()) as { task: string };
+        let schedule = await getSchedule(d);
+        schedule = skipBlock(schedule, task);
         await save(schedule);
         return json(schedule);
       }
