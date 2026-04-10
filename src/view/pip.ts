@@ -12,69 +12,75 @@ declare global {
   }
 }
 
-type CurrentInfo = {
-  task: string;
-  remaining: string;
-  kind: string;
-  progress: number;
-};
+const PIP_STYLES = `
+body { margin:0; padding:8px; background:#0d1117; color:#e6edf3; font-family:-apple-system,sans-serif; user-select:none; }
+.pip-task { font-size:15px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pip-time { font-size:20px; font-weight:700; color:#ff4444; margin-bottom:6px; font-variant-numeric:tabular-nums; }
+.pip-bar { height:4px; background:#21262d; border-radius:2px; overflow:hidden; margin-bottom:8px; }
+.pip-fill { height:100%; background:#58a6ff; transition:width 1s linear; }
+.pip-actions { display:flex; gap:6px; }
+.pip-btn { flex:1; padding:4px; border:1px solid #30363d; background:none; color:#e6edf3; border-radius:4px; cursor:pointer; font-size:12px; }
+.pip-btn:hover { background:#30363d; }
+.pip-btn.complete:hover { background:#238636; border-color:#238636; }
+.pip-btn.skip:hover { background:#6e4000; border-color:#6e4000; }
+`;
 
-function getCurrentInfo(schedule: ScheduleBlock[]): CurrentInfo | null {
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const nowSec = now.getSeconds();
-  const current = schedule.find(
-    s => nowMin >= timeToMin(s.start) && nowMin < timeToMin(s.end),
+function getNowMin(): number {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+function updatePipContent(
+  pw: Window,
+  getBlocks: () => ScheduleBlock[],
+): void {
+  if (pw.closed) return;
+  const root = pw.document.getElementById('pip-root');
+  if (!root) return;
+
+  const blocks = getBlocks();
+  const nowMin = getNowMin();
+
+  // 現在のブロックを探す
+  const current = blocks.find(
+    b => nowMin >= timeToMin(b.start) && nowMin < timeToMin(b.end),
   );
 
   if (!current) {
-    if (schedule.length === 0) return null;
-    if (nowMin < timeToMin(schedule[0]!.start))
-      return { task: '開始前', remaining: '', kind: '-', progress: 0 };
-    return { task: '終了', remaining: '', kind: '-', progress: 1 };
+    const next = blocks.find(b => timeToMin(b.start) > nowMin);
+    if (next) {
+      const untilMin = timeToMin(next.start) - nowMin;
+      root.innerHTML = `<div class="pip-task">待機中</div><div class="pip-time">${next.task} まで ${untilMin}分</div>`;
+    } else {
+      root.innerHTML = '<div class="pip-task">本日終了</div>';
+    }
+    return;
   }
 
-  const startMin = timeToMin(current.start);
-  const endMin = timeToMin(current.end);
-  const totalSec = (endMin - startMin) * 60;
-  const elapsedSec = (nowMin - startMin) * 60 + nowSec;
-  const remainSec = Math.max(0, totalSec - elapsedSec);
-  const remainMin = Math.ceil(remainSec / 60);
-  const progress = elapsedSec / totalSec;
+  const remain = timeToMin(current.end) - nowMin;
+  const total = timeToMin(current.end) - timeToMin(current.start);
+  const progress = total > 0 ? (1 - remain / total) : 0;
+  const colors = KIND_COLORS[current.kind] ?? KIND_COLORS['other']!;
+  const barColor = current.kind === 'mtg' ? '#e07e4f' : colors.fg;
 
-  return {
-    task: current.task,
-    remaining: remainMin + '分',
-    kind: current.kind,
-    progress,
-  };
-}
+  const isActionable = current.status === 'pending' || current.status === 'active';
 
-function updatePip(pipWindow: Window, schedule: ScheduleBlock[]): boolean {
-  if (pipWindow.closed) return false;
-
-  const info = getCurrentInfo(schedule);
-  if (!info) return true;
-
-  const taskEl = pipWindow.document.getElementById('pip-task');
-  const remainEl = pipWindow.document.getElementById('pip-remain');
-  const bar = pipWindow.document.getElementById('pip-bar');
-  const container = pipWindow.document.getElementById('pip-container');
-  if (!taskEl || !remainEl || !bar || !container) return true;
-
-  const colors = KIND_COLORS[info.kind] ?? KIND_COLORS['-']!;
-  container.style.borderLeftColor = colors.fg;
-  taskEl.textContent = info.task;
-  remainEl.textContent = info.remaining ? '残り ' + info.remaining : info.task;
-  bar.style.width = info.progress * 100 + '%';
-  bar.style.background = colors.fg;
-
-  return true;
+  root.innerHTML = `
+    <div class="pip-task">${current.kind === 'mtg' ? '\u{1F5E3}\uFE0F ' : ''}${current.task}</div>
+    <div class="pip-time">残り ${remain}分</div>
+    <div class="pip-bar"><div class="pip-fill" style="width:${Math.min(progress * 100, 100)}%; background:${barColor}"></div></div>
+    ${isActionable ? `
+    <div class="pip-actions">
+      <button class="pip-btn complete" data-action="complete">\u2713 完了</button>
+      <button class="pip-btn skip" data-action="skip">\u23ED スキップ</button>
+    </div>` : ''}
+  `;
 }
 
 export function setupPip(
   btn: HTMLButtonElement,
-  schedule: ScheduleBlock[],
+  getBlocks: () => ScheduleBlock[],
+  onAction: (action: string, task: string) => Promise<void>,
 ): void {
   let pipWindow: Window | null = null;
   let pipInterval: ReturnType<typeof setInterval> | null = null;
@@ -104,88 +110,43 @@ export function setupPip(
 
     try {
       pipWindow = await window.documentPictureInPicture!.requestWindow({
-        width: 340,
-        height: 90,
+        width: 380,
+        height: 130,
       });
     } catch (e) {
       console.error('PiP error:', e);
       return;
     }
 
-    const info = getCurrentInfo(schedule);
-    const colors = info
-      ? (KIND_COLORS[info.kind] ?? KIND_COLORS['-']!)
-      : KIND_COLORS['-']!;
+    pipWindow.document.head.innerHTML = `<style>${PIP_STYLES}</style>`;
+    pipWindow.document.body.innerHTML = '<div id="pip-root"></div>';
 
-    pipWindow.document.body.innerHTML = '';
-
-    const style = pipWindow.document.createElement('style');
-    style.textContent = `
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
-        background: #0f0f0f;
-        color: #e0e0e0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        overflow: hidden;
-        user-select: none;
+    pipWindow.document.body.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      const action = target.dataset['action'];
+      if (action) {
+        const blocks = getBlocks();
+        const nowMin = getNowMin();
+        const current = blocks.find(
+          b => nowMin >= timeToMin(b.start) && nowMin < timeToMin(b.end),
+        );
+        if (current) {
+          await onAction(action, current.task);
+          updatePipContent(pipWindow!, getBlocks);
+        }
       }
-      #pip-container {
-        width: 100%;
-        padding: 12px 16px;
-        border-left: 4px solid ${colors.fg};
-      }
-      #pip-task {
-        font-size: 15px;
-        font-weight: 600;
-        color: #fff;
-        margin-bottom: 4px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      #pip-remain {
-        font-size: 20px;
-        font-weight: 700;
-        color: #ff4444;
-        font-variant-numeric: tabular-nums;
-        margin-bottom: 6px;
-      }
-      .pip-progress {
-        width: 100%;
-        height: 3px;
-        background: #222;
-        border-radius: 2px;
-        overflow: hidden;
-      }
-      #pip-bar {
-        height: 100%;
-        border-radius: 2px;
-        transition: width 1s linear;
-      }
-    `;
-    pipWindow.document.head.appendChild(style);
-
-    const container = pipWindow.document.createElement('div');
-    container.id = 'pip-container';
-    container.innerHTML = `
-      <div id="pip-task">${info ? info.task : '-'}</div>
-      <div id="pip-remain">${info?.remaining ? '残り ' + info.remaining : '-'}</div>
-      <div class="pip-progress"><div id="pip-bar" style="width:${info ? info.progress * 100 : 0}%;background:${colors.fg}"></div></div>
-    `;
-    pipWindow.document.body.appendChild(container);
+    });
 
     btn.classList.add('active');
     btn.textContent = 'PiP ON';
 
-    updatePip(pipWindow, schedule);
+    updatePipContent(pipWindow, getBlocks);
     pipInterval = setInterval(() => {
-      if (!pipWindow || !updatePip(pipWindow, schedule)) {
+      if (!pipWindow || pipWindow.closed) {
         closePip();
+        return;
       }
+      updatePipContent(pipWindow, getBlocks);
     }, 1000);
 
     pipWindow.addEventListener('pagehide', () => closePip());

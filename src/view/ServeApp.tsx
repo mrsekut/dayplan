@@ -15,6 +15,12 @@ export function ServeApp({ date }: Props) {
 
   const pipBtnRef = useRef<HTMLButtonElement>(null);
   const pipSetupDone = useRef(false);
+  const dataRef = useRef<ScheduleData | null>(null);
+  dataRef.current = data;
+  const actionsRef = useRef<{
+    complete: (task: string) => Promise<void>;
+    skip: (task: string) => Promise<void>;
+  }>({ complete: async () => {}, skip: async () => {} });
 
   const reload = useCallback(async () => {
     try {
@@ -39,7 +45,14 @@ export function ServeApp({ date }: Props) {
   // PiP setup
   useEffect(() => {
     if (data && pipBtnRef.current && !pipSetupDone.current) {
-      setupPip(pipBtnRef.current, data.blocks);
+      setupPip(
+        pipBtnRef.current,
+        () => dataRef.current?.blocks ?? [],
+        async (action, task) => {
+          if (action === 'complete') await actionsRef.current.complete(task);
+          else if (action === 'skip') await actionsRef.current.skip(task);
+        },
+      );
       pipSetupDone.current = true;
     }
   }, [data]);
@@ -116,6 +129,8 @@ export function ServeApp({ date }: Props) {
     },
     [date],
   );
+
+  actionsRef.current = { complete: handleComplete, skip: handleSkip };
 
   const handleUpdateTime = useCallback(
     async (task: string, start: string, end: string) => {
