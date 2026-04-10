@@ -1,12 +1,12 @@
 # dayplan
 
-CLI tool for AI-driven daily schedule management. Manages time blocks as JSON, renders HTML timelines, and sends macOS notifications.
+CLI tool for AI-driven daily schedule management. Manages time blocks as JSON, provides interactive web UI, and sends macOS notifications.
 
 ## Data Model
 
 ```typescript
-type TaskKind = '他人影響' | '思考系' | '作業系' | 'MTG' | '-';
-type BlockStatus = 'pending' | 'completed';
+type TaskKind = 'focus' | 'batch' | 'mtg' | 'other';
+type BlockStatus = 'pending' | 'active' | 'completed' | 'skipped';
 
 type SubTask = {
   title: string;
@@ -17,8 +17,9 @@ type TimeBlock = {
   start: string; // "HH:MM" (24h)
   end: string; // "HH:MM" (24h)
   task: string;
-  kind: TaskKind; // defaults to '-'
+  kind: TaskKind; // defaults to 'other'
   status: BlockStatus; // defaults to 'pending'
+  beadId?: string; // beads issue ID for auto-close on complete
   subtasks?: SubTask[]; // optional sub-tasks within a block
 };
 
@@ -49,10 +50,12 @@ dayplan show [date]
 dayplan status [date]
 
 # Add a single block (pipe JSON to stdin)
-echo '{"start":"10:00","end":"10:30","task":"foo","kind":"作業系"}' | dayplan add 2025-07-10
+echo '{"start":"10:00","end":"10:30","task":"foo","kind":"batch"}' | dayplan add 2025-07-10
 
-# Mark a task as completed
+# Task lifecycle
+dayplan activate 2025-07-10 "task name"
 dayplan complete 2025-07-10 "task name"
+dayplan skip 2025-07-10 "task name"
 
 # Remove a task
 dayplan remove 2025-07-10 "task name"
@@ -62,7 +65,7 @@ dayplan remove 2025-07-10 "task name"
 
 ```bash
 # Start interactive web UI server (localhost:3456)
-# Supports: block reordering, subtask management, task completion, carry-over to next day
+# Supports: block reordering, subtask management, completion, skip, carry-over, PiP
 dayplan serve [date]
 ```
 
@@ -99,4 +102,4 @@ bun link     # makes 'dayplan' available globally
 bun test
 ```
 
-Test files are in `test/core/` covering schedule logic, formatting, rendering, and notifications.
+Test files are in `test/core/` covering schedule logic, formatting, planner, and notifications.

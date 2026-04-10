@@ -60,7 +60,25 @@ async function main(): Promise<void> {
       await removeCommand(date, task, jsonFlag);
       break;
     }
-case 'serve': {
+    case 'skip': {
+      const date = filteredArgs[1];
+      const task = filteredArgs[2];
+      if (!date || !task)
+        throw new Error('Usage: dayplan skip <YYYY-MM-DD> <task-name>');
+      const { skipCommand } = await import('./commands/skip');
+      await skipCommand(date, task, jsonFlag);
+      break;
+    }
+    case 'activate': {
+      const date = filteredArgs[1];
+      const task = filteredArgs[2];
+      if (!date || !task)
+        throw new Error('Usage: dayplan activate <YYYY-MM-DD> <task-name>');
+      const { activateCommand } = await import('./commands/activate');
+      await activateCommand(date, task, jsonFlag);
+      break;
+    }
+    case 'serve': {
       const date = filteredArgs[1] ?? today();
       const { serveCommand } = await import('./commands/serve');
       await serveCommand(date);
@@ -104,6 +122,8 @@ Usage:
   dayplan status [date]           Current task & remaining time
   dayplan add <date>              Add a block (pipe JSON to stdin)
   dayplan complete <date> <task>  Mark task as completed
+  dayplan skip <date> <task>      Skip a task
+  dayplan activate <date> <task>  Set task as active
   dayplan remove <date> <task>    Remove a task
   dayplan serve [date]            Start interactive web UI server
   dayplan notify [date]           Register macOS notifications

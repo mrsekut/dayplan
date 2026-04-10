@@ -10,7 +10,7 @@ AI builds the schedule JSON, dayplan handles persistence and display.
 ### Data Management
 \`\`\`bash
 # Set full schedule (pipe JSON to stdin)
-echo '{"date":"2026-03-12","blocks":[{"start":"09:30","end":"10:00","task":"PRレビュー","kind":"他人影響","status":"pending"}]}' | dayplan set 2026-03-12
+echo '{"date":"2026-03-12","blocks":[{"start":"09:30","end":"10:00","task":"PRレビュー","kind":"focus","status":"pending"}]}' | dayplan set 2026-03-12
 
 # Show schedule
 dayplan show [date]          # defaults to today
@@ -21,10 +21,12 @@ dayplan status
 dayplan status --json
 
 # Add a single block
-echo '{"start":"14:00","end":"14:30","task":"設計","kind":"思考系"}' | dayplan add 2026-03-12
+echo '{"start":"14:00","end":"14:30","task":"設計","kind":"focus"}' | dayplan add 2026-03-12
 
-# Complete a task
-dayplan complete 2026-03-12 "PRレビュー"
+# Task lifecycle
+dayplan activate 2026-03-12 "PRレビュー"   # Set as active (currently working)
+dayplan complete 2026-03-12 "PRレビュー"   # Mark as completed
+dayplan skip 2026-03-12 "PRレビュー"       # Skip task
 
 # Remove a task
 dayplan remove 2026-03-12 "PRレビュー"
@@ -33,7 +35,7 @@ dayplan remove 2026-03-12 "PRレビュー"
 ### Interactive Web UI
 \`\`\`bash
 dayplan serve [date]         # Start interactive web UI (localhost:3456)
-                             # Block reordering, subtask management, completion, carry-over
+                             # Block reordering, subtask management, completion, skip, carry-over
 \`\`\`
 
 ### Notifications
@@ -52,12 +54,15 @@ All commands accept \`--json\` for machine-readable output.
 
 ## Data Model
 \`\`\`typescript
-type TaskKind = "他人影響" | "思考系" | "作業系" | "MTG" | "-";
-type BlockStatus = "pending" | "completed";
+type TaskKind = "focus" | "batch" | "mtg" | "other";
+type BlockStatus = "pending" | "active" | "completed" | "skipped";
 type SubTask = { title: string; done: boolean };
-type TimeBlock = { start: string; end: string; task: string; kind: TaskKind; status: BlockStatus; subtasks?: SubTask[] };
+type TimeBlock = { start: string; end: string; task: string; kind: TaskKind; status: BlockStatus; beadId?: string; subtasks?: SubTask[] };
 type Schedule = { date: string; blocks: TimeBlock[] };
 \`\`\`
+
+### Beads Integration
+When a block has a \`beadId\` field, completing it via \`dayplan complete\` or the web UI automatically runs \`bd close <beadId>\`.
 
 ## Workflow
 
@@ -71,6 +76,7 @@ type Schedule = { date: string; blocks: TimeBlock[] };
 ### During the Day
 - Use \`dayplan serve\` for interactive management (reorder, subtasks, carry-over)
 - Task done → \`dayplan complete <date> "<task>"\`
+- Skip task → \`dayplan skip <date> "<task>"\`
 - Add ad-hoc → \`echo '<block>' | dayplan add <date>\`
 - Remove cancelled → \`dayplan remove <date> "<task>"\`
 - After changes → \`dayplan notify\` to refresh reminders

@@ -8,7 +8,7 @@ export async function addCommand(
   const input = await Bun.stdin.text();
   if (!input.trim()) {
     throw new Error(
-      'No input. Pipe a block to stdin: echo \'{"start":"10:00","end":"10:30","task":"foo","kind":"作業系"}\' | dayplan add <date>',
+      'No input. Pipe a block to stdin: echo \'{"start":"10:00","end":"10:30","task":"foo","kind":"batch"}\' | dayplan add <date>',
     );
   }
 
